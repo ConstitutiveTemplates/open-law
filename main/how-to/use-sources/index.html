@@ -837,6 +837,14 @@ all 50 titles and maps each hit to an eCFR path (<code>title-N[/part-P|
 Code) sit on a different channel (uscode.house.gov) that is currently
 bot-gated and out of scope — regulations are the machine-readable bulk
 of US regulatory law.</p>
+<div class="highlight"><pre><span></span><code><span class="gp"># </span>Canada<span class="err">'</span>s<span class="w"> </span>consolidated<span class="w"> </span>federal<span class="w"> </span>statutes<span class="w"> </span><span class="o">(</span>Justice<span class="w"> </span>Laws<span class="w"> </span>Website<span class="w"> </span>XML<span class="o">)</span>
+<span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>ca<span class="w"> </span>P-8.6<span class="w">    </span><span class="c1"># PIPEDA — Personal Information Protection and Electronic Documents Act</span>
+<span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>ca<span class="w"> </span>C-46<span class="w">     </span><span class="c1"># Criminal Code (~6 MB consolidation)</span>
+</code></pre></div>
+<p>The <code>ca</code> source has no machine keyword search (the legacy search form
+returns an empty page to machines) — fetch by act code from the
+human acts index. The XML carries the consolidation's point-in-time
+date as <code>modified</code> and the in-force flag in <code>extras</code>.</p>
 <h2 id="read-the-full-text">Read the full text<a class="headerlink" href="#read-the-full-text" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>text<span class="w"> </span>bd<span class="w"> </span><span class="m">43</span><span class="w">        </span><span class="c1"># HTML page -&gt; plain text</span>
 <span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>text<span class="w"> </span>uk<span class="w"> </span>ukpga/1989/6<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-40

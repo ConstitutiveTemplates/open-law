@@ -20,6 +20,7 @@ from open_law.sources.kr import KoreaLawAdapter
 from open_law.sources.la import LaoGazetteAdapter
 from open_law.sources.np import NepalLawCommissionAdapter
 from open_law.sources.uk import LegislationGovUkAdapter
+from open_law.sources.us import EcfrAdapter
 
 __all__ = [
     "ADAPTERS",
@@ -37,6 +38,7 @@ ADAPTERS: dict[str, type[SourceAdapter]] = {
     NepalLawCommissionAdapter.source_id: NepalLawCommissionAdapter,
     BangladeshLawsAdapter.source_id: BangladeshLawsAdapter,
     EurlexAdapter.source_id: EurlexAdapter,
+    EcfrAdapter.source_id: EcfrAdapter,
 }
 
 

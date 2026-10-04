@@ -35,6 +35,20 @@ metadata list does not. The same pattern applies to Korea: `search kr`
 activates once the ``LAW_KR_OC`` open-API id (issued at
 openapi.law.go.kr) is set in the environment.
 
+```console
+# US federal regulations (eCFR — no key, structured XML)
+$ uv run open-law search us "children online privacy" --limit 5
+$ uv run open-law fetch us title-16/part-312        # the COPPA Rule
+$ uv run open-law fetch us title-16/part-312/section-312.5
+```
+
+The `us` source wraps the eCFR public API: `search` is full-text across
+all 50 titles and maps each hit to an eCFR path (`title-N[/part-P|
+/section-S]`), `fetch` returns that node's dated XML. Statutes (the US
+Code) sit on a different channel (uscode.house.gov) that is currently
+bot-gated and out of scope — regulations are the machine-readable bulk
+of US regulatory law.
+
 ## Read the full text
 
 ```console

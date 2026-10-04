@@ -33,7 +33,8 @@ with Akoma Ntoso locations surfaced whenever a source offers them.
   (Nepal Law Commission, Crawl-delay 10), `la` (Lao Official Gazette,
   PDF full texts), `eu` (Publications Office CELLAR by CELEX),
   `us` (eCFR — US federal regulations, key-free JSON + XML),
-  `ca` (Justice Laws Website — consolidated Acts, XML); adding
+  `ca` (Justice Laws Website — consolidated Acts, XML),
+  `jlt` (MoJ official English translations, TMX); adding
   a jurisdiction is one
   subclass plus one registry line — see the
   [Asia coverage map](docs/explanations/asia-coverage.md) for every

@@ -65,6 +65,21 @@ returns an empty page to machines) — fetch by act code from the
 human acts index. The XML carries the consolidation's point-in-time
 date as `modified` and the in-force flag in `extras`.
 
+```console
+# Japan's official English translations (JLT — Ministry of Justice)
+$ uv run open-law fetch jlt 4913     # Labor Standards Act, TMX bilingual
+$ uv run open-law fetch jlt 4848     # Civil Code Parts I-III
+```
+
+The `jlt` source serves the Ministry of Justice's official English
+translations: `fetch` resolves the law's view page and returns the TMX
+1.4 download (`text_url`) — a translation memory of ja/en provision
+pairs — with PDF/TXT alternates in `extras`. Keyword search is
+CSRF-gated to machines, so `search` declines; the per-law ids come from
+the human index. This is the *English* side of the same statute book
+`jp` (e-Gov) indexes in Japanese — the bridge orimono's legal corpus
+evaluates against.
+
 ## Read the full text
 
 ```console

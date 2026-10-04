@@ -18,7 +18,7 @@ license metadata in September 2026; re-verify before reversing one.
 | Playwright | Apache-2.0 | Deferred — no JS-only source among current adapters |
 | legislation.gov.uk API | Open Government Licence v3 | **Used** (`uk` adapter) |
 | e-Gov 法令API v2 | GoJ Standard Terms of Use | **Used** (`jp` adapter) |
-| JLT database (japaneselawtranslation.go.jp) | PDL 1.0 + MoJ © | **Documented, not an adapter.** Official MoJ English translations of the same statutes `jp` indexes (Civil Code 2,730 pairs etc. power orimono's `reference-eval.py`); terms live at `/en/index/terms`, no robots.txt (404), tables fetchable as HTML — a future `jp-en` bitext adapter is possible but unscoped |
+| JLT database (japaneselawtranslation.go.jp) | PDL 1.0 + MoJ © | **Used** (`jlt` adapter; TMX bilingual download per law, search CSRF-gated → fetch-by-id only — powers orimono's `reference-eval.py` via the same statutes) |
 | law.go.kr DRF Open API | KOGL (attribution) | **Used** (`kr` adapter, key-gated via `LAW_KR_OC`) |
 | EU CELLAR | Decision 2011/833/EU | **Used** (`eu` adapter) |
 | eCFR public API | US public domain (17 USC §105) | **Used** (`us` adapter; govinfo key-gated, uscode.house.gov bot-gated — eCFR is the key-free regulatory channel) |

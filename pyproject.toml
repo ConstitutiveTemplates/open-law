@@ -137,6 +137,9 @@ skip_covered = true
 skip_empty = true
 
 [tool.typos.default]
+# `in-force` is the Justice Laws Website XML's own attribute name
+# (pit-date/in-force/lastAmendedDate); not a typo for `enforce`.
+extend-words = { inforce = "inforce" }
 extend-ignore-words-re = ['\b[A-Z]{3}\b']
 extend-ignore-identifiers-re = ['\b[A-Z]{3}\b']
 

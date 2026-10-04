@@ -20,6 +20,15 @@ def test_classifies_english_title_by_word_boundaries() -> None:
     assert "data-protection" in topics
 
 
+def test_classifies_new_adapter_landmark_titles() -> None:
+    """CA/US landmark titles added with those adapters classify correctly."""
+    assert "data-protection" in classify(
+        DEFAULT_TOPICS, "Personal Information Protection and Electronic Documents Act"
+    )
+    assert "data-protection" in classify(DEFAULT_TOPICS, "PART 312 — CHILDREN'S ONLINE PRIVACY PROTECTION RULE")
+    assert "criminal" in classify(DEFAULT_TOPICS, "Criminal Code")
+
+
 def test_latin_keywords_respect_word_boundaries() -> None:
     """Word boundaries: 'tax' must not fire inside unrelated 'taxidermy'."""
     assert classify(DEFAULT_TOPICS, "Taxidermy Licensing Act") == ()

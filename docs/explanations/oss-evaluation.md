@@ -20,6 +20,8 @@ license metadata in September 2026; re-verify before reversing one.
 | e-Gov 法令API v2 | GoJ Standard Terms of Use | **Used** (`jp` adapter) |
 | law.go.kr DRF Open API | KOGL (attribution) | **Used** (`kr` adapter, key-gated via `LAW_KR_OC`) |
 | EU CELLAR | Decision 2011/833/EU | **Used** (`eu` adapter) |
+| eCFR public API | US public domain (17 USC §105) | **Used** (`us` adapter; govinfo key-gated, uscode.house.gov bot-gated — eCFR is the key-free regulatory channel) |
+| Justice Laws Website XML | Crown copyright (non-commercial reproduction) | **Used** (`ca` adapter; legacy search has no machine endpoint, fetch-by-code only) |
 
 Per-country channel status across Asia (robots verdicts, bot walls,
 dead channels): see the [Asia coverage map](asia-coverage.md).
@@ -65,6 +67,15 @@ Verified dead while probing; recorded so nobody rebuilds on them:
 - **LexML Brasil OAI-PMH** — `www.lexml.gov.br/oai?verb=Identify`
   returns 404. Brazilian legislation needs a new channel before any
   `br` adapter is attempted.
+- **eCFR human search UI** (`/search`) — robots.txt `Disallow`; the
+  `/api/` tree is explicitly open, so the `us` adapter uses the API only.
+- **govinfo api.data.gov without a key** — `DEMO_KEY` is rate-limited
+  in probing (429s); usable only with a registered key, so the `us`
+  adapter does not depend on it.
+- **uscode.house.gov** — bot-gated / under maintenance during probing
+  (2026-10); statutes stay out of scope until the channel stabilises.
+- **Justice Laws legacy Search.aspx to machines** — returns the empty
+  form, not results; the `ca` adapter fetches by act code instead.
 
 ## The chosen architecture follows from the verdicts
 

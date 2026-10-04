@@ -30,7 +30,15 @@ Topic = str
 # topic id -> keywords. Latin keywords match on word boundaries,
 # non-Latin (CJK, Devanagari, Bengali etc.) as substrings.
 DEFAULT_TOPICS: dict[Topic, tuple[str, ...]] = {
-    "data-protection": ("個人情報", "プライバシー", "data protection", "privacy", "personal data"),
+    "data-protection": (
+        "個人情報",
+        "プライバシー",
+        "data protection",
+        "privacy",
+        "personal data",
+        "personal information protection",  # PIPEDA-style titles
+        "renseignements personnels",  # FR: PIPEDA's French short title
+    ),
     "ai": ("人工知能", "ai regulation", "artificial intelligence", "algorithm"),
     "banking": ("銀行", "金融機関", "बैंक", "ব্যাংক", "banking", "bank act", "banking act"),
     "securities": ("金融商品取引", "有価証券", "securities", "investment services"),

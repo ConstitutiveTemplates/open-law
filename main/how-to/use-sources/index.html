@@ -850,6 +850,18 @@ of US regulatory law.</p>
 returns an empty page to machines) — fetch by act code from the
 human acts index. The XML carries the consolidation's point-in-time
 date as <code>modified</code> and the in-force flag in <code>extras</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="gp"># </span>Japan<span class="err">'</span>s<span class="w"> </span>official<span class="w"> </span>English<span class="w"> </span>translations<span class="w"> </span><span class="o">(</span>JLT<span class="w"> </span>—<span class="w"> </span>Ministry<span class="w"> </span>of<span class="w"> </span>Justice<span class="o">)</span>
+<span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>jlt<span class="w"> </span><span class="m">4913</span><span class="w">     </span><span class="c1"># Labor Standards Act, TMX bilingual</span>
+<span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>jlt<span class="w"> </span><span class="m">4848</span><span class="w">     </span><span class="c1"># Civil Code Parts I-III</span>
+</code></pre></div>
+<p>The <code>jlt</code> source serves the Ministry of Justice's official English
+translations: <code>fetch</code> resolves the law's view page and returns the TMX
+1.4 download (<code>text_url</code>) — a translation memory of ja/en provision
+pairs — with PDF/TXT alternates in <code>extras</code>. Keyword search is
+CSRF-gated to machines, so <code>search</code> declines; the per-law ids come from
+the human index. This is the <em>English</em> side of the same statute book
+<code>jp</code> (e-Gov) indexes in Japanese — the bridge orimono's legal corpus
+evaluates against.</p>
 <h2 id="read-the-full-text">Read the full text<a class="headerlink" href="#read-the-full-text" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>text<span class="w"> </span>bd<span class="w"> </span><span class="m">43</span><span class="w">        </span><span class="c1"># HTML page -&gt; plain text</span>
 <span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>text<span class="w"> </span>uk<span class="w"> </span>ukpga/1989/6<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-40

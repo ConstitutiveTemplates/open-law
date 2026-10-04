@@ -22,9 +22,7 @@ def test_classifies_english_title_by_word_boundaries() -> None:
 
 def test_classifies_new_adapter_landmark_titles() -> None:
     """CA/US landmark titles added with those adapters classify correctly."""
-    assert "data-protection" in classify(
-        DEFAULT_TOPICS, "Personal Information Protection and Electronic Documents Act"
-    )
+    assert "data-protection" in classify(DEFAULT_TOPICS, "Personal Information Protection and Electronic Documents Act")
     assert "data-protection" in classify(DEFAULT_TOPICS, "PART 312 — CHILDREN'S ONLINE PRIVACY PROTECTION RULE")
     assert "criminal" in classify(DEFAULT_TOPICS, "Criminal Code")
 

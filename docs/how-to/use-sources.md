@@ -33,7 +33,12 @@ $ uv run open-law fetch eu 32022R2065
 e-Gov's full-text endpoint requires a (free) application key; the
 metadata list does not. The same pattern applies to Korea: `search kr`
 activates once the ``LAW_KR_OC`` open-API id (issued at
-openapi.law.go.kr) is set in the environment.
+openapi.law.go.kr) is set in the environment. The `jp` law_ids that the
+e-Gov list returns are exactly what the orimono ecosystem's JLT legal
+corpus (`datasets/legal/`, five statutes incl. the 2,730-pair Civil Code
+split) scores against — the official MoJ English translations there are
+the reference side for `reference-eval.py`, while open-law supplies the
+Japanese-side identity and metadata for the same statutes.
 
 ```console
 # US federal regulations (eCFR — no key, structured XML)

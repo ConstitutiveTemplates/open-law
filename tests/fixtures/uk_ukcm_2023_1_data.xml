@@ -1,0 +1,137 @@
+<Legislation xmlns="http://www.legislation.gov.uk/namespaces/legislation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" DocumentURI="http://www.legislation.gov.uk/ukcm/2023/1" IdURI="http://www.legislation.gov.uk/id/ukcm/2023/1" NumberOfProvisions="3" xsi:schemaLocation="http://www.legislation.gov.uk/namespaces/legislation http://www.legislation.gov.uk/schema/legislation.xsd" SchemaVersion="1.0" RestrictExtent="E" RestrictStartDate="2023-06-29"><ukm:Metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dct="http://purl.org/dc/terms/" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:ukm="http://www.legislation.gov.uk/namespaces/metadata">
+					<dc:identifier>http://www.legislation.gov.uk/ukcm/2023/1</dc:identifier><dc:title>Diocesan Stipends Funds (Amendment) Measure 2023</dc:title><dc:language>en</dc:language><dc:publisher>Statute Law Database</dc:publisher><dc:modified>2023-11-23</dc:modified><dc:contributor>Expert Participation</dc:contributor><dct:valid>2023-06-29</dct:valid>
+					
+					<atom:link rel="self" href="http://www.legislation.gov.uk/ukcm/2023/1/data.xml" type="application/xml"/><atom:link rel="http://www.legislation.gov.uk/def/navigation/resources" href="http://www.legislation.gov.uk/ukcm/2023/1/resources" title="More Resources"/>
+					
+					
+					
+					<atom:link rel="http://www.legislation.gov.uk/def/navigation/act" href="http://www.legislation.gov.uk/ukcm/2023/1" title="whole act"/><atom:link rel="http://www.legislation.gov.uk/def/navigation/introduction" href="http://www.legislation.gov.uk/ukcm/2023/1/introduction" title="introduction"/>
+					<atom:link rel="http://www.legislation.gov.uk/def/navigation/body" href="http://www.legislation.gov.uk/ukcm/2023/1/body" title="body"/>
+					
+					
+										
+					
+					
+					
+					<atom:link rel="alternate" type="application/rdf+xml" href="http://www.legislation.gov.uk/ukcm/2023/1/data.rdf" title="RDF/XML"/><atom:link rel="alternate" type="application/akn+xml" href="http://www.legislation.gov.uk/ukcm/2023/1/data.akn" title="AKN"/><atom:link rel="alternate" type="application/xhtml+xml" href="http://www.legislation.gov.uk/ukcm/2023/1/data.xht" title="HTML snippet"/><atom:link rel="alternate" type="text/html" href="http://www.legislation.gov.uk/ukcm/2023/1/data.htm" title="Website (XHTML) Default View"/><atom:link rel="alternate" type="text/csv" href="http://www.legislation.gov.uk/ukcm/2023/1/data.csv" title="CSV"/><atom:link rel="alternate" type="application/pdf" href="http://www.legislation.gov.uk/ukcm/2023/1/data.pdf" title="PDF"/>
+					<atom:link rel="alternate" type="application/akn+xhtml" href="http://www.legislation.gov.uk/ukcm/2023/1/data.html" title="HTML5 snippet"/>
+
+					<atom:link rel="alternate" href="http://www.legislation.gov.uk/ukcm/2023/1/pdfs/ukcm_20230001_en.pdf" type="application/pdf" title="Original PDF"/>
+					<atom:link rel="http://purl.org/dc/terms/tableOfContents" hreflang="en" href="http://www.legislation.gov.uk/ukcm/2023/1/contents" title="Table of Contents"/>
+					
+					<atom:link rel="http://purl.org/dc/terms/hasVersion" href="http://www.legislation.gov.uk/ukcm/2023/1/enacted" title="enacted"/><atom:link rel="http://purl.org/dc/terms/hasVersion" href="http://www.legislation.gov.uk/ukcm/2023/1/2023-06-29" title="2023-06-29"/>
+					
+					
+					<ukm:PrimaryMetadata><ukm:DocumentClassification><ukm:DocumentCategory Value="primary"/><ukm:DocumentMainType Value="UnitedKingdomChurchMeasure"/><ukm:DocumentStatus Value="revised"/></ukm:DocumentClassification><ukm:Year Value="2023"/><ukm:Number Value="1"/><ukm:EnactmentDate Date="2023-06-29"/><ukm:ISBN Value="9780105508281"/></ukm:PrimaryMetadata>
+					
+
+                    
+									 
+					<ukm:Alternatives><ukm:Alternative URI="http://www.legislation.gov.uk/ukcm/2023/1/pdfs/ukcm_20230001_en.pdf" Date="2023-07-03" Size="349675"/></ukm:Alternatives>
+					
+					<ukm:Statistics>
+									<ukm:TotalParagraphs Value="3"/>
+									<ukm:BodyParagraphs Value="3"/>
+									<ukm:ScheduleParagraphs Value="0"/>
+									<ukm:AttachmentParagraphs Value="0"/>
+									<ukm:TotalImages Value="0"/>
+								</ukm:Statistics>
+				</ukm:Metadata><Primary>
+<PrimaryPrelims DocumentURI="http://www.legislation.gov.uk/ukcm/2023/1/introduction" IdURI="http://www.legislation.gov.uk/id/ukcm/2023/1/introduction" RestrictExtent="E" RestrictStartDate="2023-06-29">
+<Title>Diocesan Stipends Funds (Amendment) Measure 2023</Title>
+<Number>2023 No. 1</Number>
+<LongTitle>A Measure passed by the General Synod of the Church of England to enable money from the income account of a diocesan stipends fund to be given to other dioceses.</LongTitle>
+<DateOfEnactment>
+<DateText>[29th June 2023]</DateText>
+</DateOfEnactment>
+</PrimaryPrelims>
+<Body DocumentURI="http://www.legislation.gov.uk/ukcm/2023/1/body" IdURI="http://www.legislation.gov.uk/id/ukcm/2023/1/body" NumberOfProvisions="3" NumberFormat="default" RestrictExtent="E" RestrictStartDate="2023-06-29">
+<P1group RestrictExtent="E" RestrictStartDate="2023-06-29">
+<Title>Distribution of income to other dioceses</Title>
+<P1 DocumentURI="http://www.legislation.gov.uk/ukcm/2023/1/section/1" IdURI="http://www.legislation.gov.uk/id/ukcm/2023/1/section/1" id="section-1">
+<Pnumber><CommentaryRef Ref="key-z434dd2e95ed5675ebc09b2bfd396a02"/>1</Pnumber>
+<P1para>
+<Text>After section 5A of the Diocesan Stipends Funds Measure 1953 insert—</Text>
+<BlockAmendment Context="main" Format="double" TargetClass="primary" TargetSubClass="unknown">
+<P1group>
+<Title>Distribution of income to other dioceses</Title>
+<P1>
+<Pnumber>5B</Pnumber>
+<P1para>
+<P2>
+<Pnumber>1</Pnumber>
+<P2para>
+<Text>Money standing to the credit of the income account of the diocesan stipends fund of a diocese, and which the diocesan board of finance is satisfied does not need to be applied for a purpose specified in section 5(1), may be applied in accordance with this section.</Text>
+</P2para>
+</P2>
+<P2>
+<Pnumber>2</Pnumber>
+<P2para>
+<Text>The diocesan board of finance may transfer the money concerned—</Text>
+<P3>
+<Pnumber>a</Pnumber>
+<P3para>
+<Text>to the income account of the diocesan stipends fund of another diocese, or</Text>
+</P3para>
+</P3>
+<P3>
+<Pnumber>b</Pnumber>
+<P3para>
+<Text>to the account held for the purposes of this section by the Archbishops’ Council or by another charity (whether established before or after the passing of this Measure).</Text>
+</P3para>
+</P3>
+</P2para>
+</P2>
+<P2>
+<Pnumber>3</Pnumber>
+<P2para>
+<Text>Where money is transferred under subsection (2)(b), the charity, having decided to which diocese or dioceses to give the money, must—</Text>
+<P3>
+<Pnumber>a</Pnumber>
+<P3para>
+<Text>if it decides to give the money to one diocese only, transfer it to the income account of the diocesan stipends fund of that diocese;</Text>
+</P3para>
+</P3>
+<P3>
+<Pnumber>b</Pnumber>
+<P3para>
+<Text>if it decides to give separate portions of the money to different dioceses, transfer each portion to the income account of the diocesan stipends fund of the diocese concerned.</Text>
+</P3para>
+</P3>
+</P2para>
+</P2>
+</P1para>
+</P1>
+</P1group>
+</BlockAmendment>
+</P1para>
+</P1>
+</P1group>
+<P1group RestrictExtent="E" RestrictStartDate="2023-06-29">
+<Title>Short title, commencement and extent</Title>
+<P1 DocumentURI="http://www.legislation.gov.uk/ukcm/2023/1/section/2" IdURI="http://www.legislation.gov.uk/id/ukcm/2023/1/section/2" id="section-2">
+<Pnumber><CommentaryRef Ref="key-zac4f32830882f0353b9d7fddf072be6"/>2</Pnumber>
+<P1para>
+<P2 DocumentURI="http://www.legislation.gov.uk/ukcm/2023/1/section/2/1" IdURI="http://www.legislation.gov.uk/id/ukcm/2023/1/section/2/1" id="section-2-1">
+<Pnumber>1</Pnumber>
+<P2para>
+<Text>This Measure may be cited as the Diocesan Stipends Funds (Amendment) Measure 2023.</Text>
+</P2para>
+</P2>
+<P2 DocumentURI="http://www.legislation.gov.uk/ukcm/2023/1/section/2/2" IdURI="http://www.legislation.gov.uk/id/ukcm/2023/1/section/2/2" id="section-2-2">
+<Pnumber>2</Pnumber>
+<P2para>
+<Text>This Measure comes into force on the day on which it is passed.</Text>
+</P2para>
+</P2>
+<P2 DocumentURI="http://www.legislation.gov.uk/ukcm/2023/1/section/2/3" IdURI="http://www.legislation.gov.uk/id/ukcm/2023/1/section/2/3" id="section-2-3">
+<Pnumber>3</Pnumber>
+<P2para>
+<Text>This Measure extends to the provinces of Canterbury and York, except for the Channel Islands and the Isle of Man.</Text>
+</P2para>
+</P2>
+</P1para>
+</P1>
+</P1group>
+</Body>
+</Primary><Commentaries><Commentary Type="I" id="key-z434dd2e95ed5675ebc09b2bfd396a02"><Para><Text>S. 1  in force at Royal Assent, see <CitationSubRef id="n6979bb1e00376f74" SectionRef="section-2-2" URI="http://www.legislation.gov.uk/id/ukcm/2023/1/section/2/2" Operative="true">s. 2(2)</CitationSubRef></Text></Para></Commentary><Commentary Type="I" id="key-zac4f32830882f0353b9d7fddf072be6"><Para><Text>S. 2  in force at Royal Assent, see <CitationSubRef id="n71e36b9c76ad609d" SectionRef="section-2-2" URI="http://www.legislation.gov.uk/id/ukcm/2023/1/section/2/2" Operative="true">s. 2(2)</CitationSubRef></Text></Para></Commentary></Commentaries></Legislation>

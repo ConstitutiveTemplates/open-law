@@ -1,0 +1,47 @@
+<rdf:RDF
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:j.0="http://publications.europa.eu/ontology/cdm#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:j.1="http://www.w3.org/2004/02/skos/core#"
+    xmlns:j.2="http://publications.europa.eu/ontology/annotation#"
+    xmlns:j.3="http://publications.europa.eu/ontology/cdm/cmr#" > 
+  <rdf:Description rdf:about="http://publications.europa.eu/resource/celex/32022R2065.ENG">
+    <rdf:type rdf:resource="http://publications.europa.eu/ontology/cdm#expression"/>
+    <j.0:expression_title_short rdf:datatype="http://www.w3.org/2001/XMLSchema#string">DSA, Digital Services Act, DSA Regulation</j.0:expression_title_short>
+    <j.0:title_short rdf:datatype="http://www.w3.org/2001/XMLSchema#string">DSA, Digital Services Act, DSA Regulation</j.0:title_short>
+    <j.0:expression_manifested_by_manifestation rdf:resource="http://publications.europa.eu/resource/celex/32022R2065.ENG.xhtml"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://publications.europa.eu/resource/cellar/3ff67256-55c4-11ed-92ed-01aa75ed71a1.0006">
+    <owl:sameAs rdf:resource="http://publications.europa.eu/resource/uriserv/OJ.L_.2022.277.01.0001.01.ENG"/>
+    <owl:sameAs rdf:resource="http://publications.europa.eu/resource/celex/32022R2065.ENG"/>
+    <owl:sameAs rdf:resource="http://publications.europa.eu/resource/oj/JOL_2022_277_R_0001.ENG"/>
+    <j.3:creationDate rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2022-10-27T08:50:19.241+02:00</j.3:creationDate>
+    <j.3:lang rdf:datatype="http://www.w3.org/2001/XMLSchema#language">eng</j.3:lang>
+    <j.3:lang rdf:datatype="http://www.w3.org/2001/XMLSchema#language">en</j.3:lang>
+    <j.3:lastModificationDate rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2023-12-13T10:52:15.199+01:00</j.3:lastModificationDate>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://publications.europa.eu/resource/oj/JOL_2022_277_R_0001.ENG">
+    <j.0:expression_title xml:lang="en">Regulation (EU) 2022/2065 of the European Parliament and of the Council of 19 October 2022 on a Single Market For Digital Services and amending Directive 2000/31/EC (Digital Services Act) (Text with EEA relevance)</j.0:expression_title>
+    <rdf:type rdf:resource="http://publications.europa.eu/ontology/cdm#expression"/>
+    <j.0:expression_manifested_by_manifestation rdf:resource="http://publications.europa.eu/resource/oj/JOL_2022_277_R_0001.ENG.fmx4"/>
+    <j.0:title xml:lang="en">Regulation (EU) 2022/2065 of the European Parliament and of the Council of 19 October 2022 on a Single Market For Digital Services and amending Directive 2000/31/EC (Digital Services Act) (Text with EEA relevance)</j.0:title>
+    <j.0:expression_uses_language rdf:resource="http://publications.europa.eu/resource/authority/language/ENG"/>
+    <j.0:expression_subtitle>PE/30/2022/REV/1</j.0:expression_subtitle>
+    <j.0:subtitle>PE/30/2022/REV/1</j.0:subtitle>
+    <j.0:belongs_to rdf:resource="http://publications.europa.eu/resource/oj/JOL_2022_277_R_0001"/>
+    <j.2:build_info rdf:datatype="http://www.w3.org/2001/XMLSchema#string">reception-ID: PO-20221027-30; environment: PROD; CERES: 4.17.2; IMMC2CDM: 3.2.2; rules: ECB-hotfix/rules.xml#75468#2021-08-30T09:03:45; builddate: 2022-10-27T10:59:19.329;</j.2:build_info>
+    <j.0:expression_belongs_to_work rdf:resource="http://publications.europa.eu/resource/oj/JOL_2022_277_R_0001"/>
+    <j.0:title>PE/30/2022/REV/1</j.0:title>
+    <j.0:expression_manifested_by_manifestation rdf:resource="http://publications.europa.eu/resource/oj/JOL_2022_277_R_0001.ENG.pdfa2a"/>
+    <j.0:uses rdf:resource="http://publications.europa.eu/resource/authority/language/ENG"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://publications.europa.eu/resource/authority/language">
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#ConceptScheme"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://publications.europa.eu/resource/authority/language/ENG">
+    <j.1:inScheme rdf:resource="http://publications.europa.eu/resource/authority/language"/>
+    <rdf:type rdf:resource="http://publications.europa.eu/ontology/cdm#language"/>
+    <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+    <j.0:language_used_by_expression rdf:resource="http://publications.europa.eu/resource/oj/JOL_2022_277_R_0001.ENG"/>
+  </rdf:Description>
+</rdf:RDF>

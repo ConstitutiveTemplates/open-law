@@ -1,0 +1,28 @@
+# Changes here will be overwritten by Copier
+_commit: 6.0.0
+_src_path: ./python-copier-template
+allow_japanese: true
+author_email: kashimiya.exe@gmail.com
+author_name: kashi-x
+description: Scrape and consolidate legislation from around the world
+distribution_name: open-law
+existing_project: false
+git_platform: github.com
+github_org: kasi-x
+include_ctf: false
+include_data_science: false
+include_scraping: true
+include_web_api: false
+layout: src
+package_name: open_law
+project_type: cli
+repo_name: open-law
+use_recommended_agent: true
+use_recommended_docs: true
+use_recommended_integrations: true
+use_recommended_license: true
+use_recommended_polish: false
+use_recommended_quality: true
+use_recommended_scraping: true
+use_recommended_security: true
+use_recommended_toolchain: true

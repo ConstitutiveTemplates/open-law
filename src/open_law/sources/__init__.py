@@ -14,6 +14,7 @@ from open_law.fetcher import PoliteFetcher
 from open_law.sources.base import NotAvailableBySourceError
 from open_law.sources.base import SourceAdapter
 from open_law.sources.bd import BangladeshLawsAdapter
+from open_law.sources.ca import JusticeLawsAdapter
 from open_law.sources.eu import EurlexAdapter
 from open_law.sources.jp import EgovAdapter
 from open_law.sources.kr import KoreaLawAdapter
@@ -39,6 +40,7 @@ ADAPTERS: dict[str, type[SourceAdapter]] = {
     BangladeshLawsAdapter.source_id: BangladeshLawsAdapter,
     EurlexAdapter.source_id: EurlexAdapter,
     EcfrAdapter.source_id: EcfrAdapter,
+    JusticeLawsAdapter.source_id: JusticeLawsAdapter,
 }
 
 

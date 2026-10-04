@@ -49,6 +49,17 @@ Code) sit on a different channel (uscode.house.gov) that is currently
 bot-gated and out of scope — regulations are the machine-readable bulk
 of US regulatory law.
 
+```console
+# Canada's consolidated federal statutes (Justice Laws Website XML)
+$ uv run open-law fetch ca P-8.6    # PIPEDA — Personal Information Protection and Electronic Documents Act
+$ uv run open-law fetch ca C-46     # Criminal Code (~6 MB consolidation)
+```
+
+The `ca` source has no machine keyword search (the legacy search form
+returns an empty page to machines) — fetch by act code from the
+human acts index. The XML carries the consolidation's point-in-time
+date as `modified` and the in-force flag in `extras`.
+
 ## Read the full text
 
 ```console

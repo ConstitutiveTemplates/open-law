@@ -32,7 +32,8 @@ with Akoma Ntoso locations surfaced whenever a source offers them.
   key-gated), `bd` (bdlaws, English-text laws of Bangladesh), `np`
   (Nepal Law Commission, Crawl-delay 10), `la` (Lao Official Gazette,
   PDF full texts), `eu` (Publications Office CELLAR by CELEX),
-  `us` (eCFR — US federal regulations, key-free JSON + XML); adding
+  `us` (eCFR — US federal regulations, key-free JSON + XML),
+  `ca` (Justice Laws Website — consolidated Acts, XML); adding
   a jurisdiction is one
   subclass plus one registry line — see the
   [Asia coverage map](docs/explanations/asia-coverage.md) for every

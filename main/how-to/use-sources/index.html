@@ -825,7 +825,12 @@ what every other command calls <code>SOURCE</code>.</p>
 e-Gov's full-text endpoint requires a (free) application key; the
 metadata list does not. The same pattern applies to Korea: <code>search kr</code>
 activates once the <code>LAW_KR_OC</code> open-API id (issued at
-openapi.law.go.kr) is set in the environment.</p>
+openapi.law.go.kr) is set in the environment. The <code>jp</code> law_ids that the
+e-Gov list returns are exactly what the orimono ecosystem's JLT legal
+corpus (<code>datasets/legal/</code>, five statutes incl. the 2,730-pair Civil Code
+split) scores against — the official MoJ English translations there are
+the reference side for <code>reference-eval.py</code>, while open-law supplies the
+Japanese-side identity and metadata for the same statutes.</p>
 <div class="highlight"><pre><span></span><code><span class="gp"># </span>US<span class="w"> </span>federal<span class="w"> </span>regulations<span class="w"> </span><span class="o">(</span>eCFR<span class="w"> </span>—<span class="w"> </span>no<span class="w"> </span>key,<span class="w"> </span>structured<span class="w"> </span>XML<span class="o">)</span>
 <span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>search<span class="w"> </span>us<span class="w"> </span><span class="s2">"children online privacy"</span><span class="w"> </span>--limit<span class="w"> </span><span class="m">5</span>
 <span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>us<span class="w"> </span>title-16/part-312<span class="w">        </span><span class="c1"># the COPPA Rule</span>

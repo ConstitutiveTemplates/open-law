@@ -139,7 +139,9 @@ skip_empty = true
 [tool.typos.default]
 # `in-force` is the Justice Laws Website XML's own attribute name
 # (pit-date/in-force/lastAmendedDate); not a typo for `enforce`.
-extend-words = { inforce = "inforce" }
+# `renseignements personnels` is correct French (PIPEDA's French short
+# title); typos' English dictionary flags the plural.
+extend-words = { inforce = "inforce", personnels = "personnels" }
 extend-ignore-words-re = ['\b[A-Z]{3}\b']
 extend-ignore-identifiers-re = ['\b[A-Z]{3}\b']
 

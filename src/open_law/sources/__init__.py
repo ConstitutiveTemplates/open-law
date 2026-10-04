@@ -16,6 +16,7 @@ from open_law.sources.base import SourceAdapter
 from open_law.sources.bd import BangladeshLawsAdapter
 from open_law.sources.ca import JusticeLawsAdapter
 from open_law.sources.eu import EurlexAdapter
+from open_law.sources.jlt import JltAdapter
 from open_law.sources.jp import EgovAdapter
 from open_law.sources.kr import KoreaLawAdapter
 from open_law.sources.la import LaoGazetteAdapter
@@ -41,6 +42,7 @@ ADAPTERS: dict[str, type[SourceAdapter]] = {
     EurlexAdapter.source_id: EurlexAdapter,
     EcfrAdapter.source_id: EcfrAdapter,
     JusticeLawsAdapter.source_id: JusticeLawsAdapter,
+    JltAdapter.source_id: JltAdapter,
 }
 
 

@@ -65,7 +65,7 @@ def test_unknown_source_exits_with_error(capsys: pytest.CaptureFixture[str]) -> 
     with pytest.raises(SystemExit) as excinfo:
         cli.main(["fetch", "mars", "x"])
     assert excinfo.value.code == 2
-    assert "known sources: bd, ca, eu, jp, kr, la, np, uk, us" in capsys.readouterr().err
+    assert "known sources: bd, ca, eu, jlt, jp, kr, la, np, uk, us" in capsys.readouterr().err
 
 
 def test_text_command_prints_plain_text(

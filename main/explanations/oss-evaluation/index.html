@@ -825,6 +825,16 @@ license metadata in September 2026; re-verify before reversing one.</p>
 <td>Decision 2011/833/EU</td>
 <td><strong>Used</strong> (<code>eu</code> adapter)</td>
 </tr>
+<tr>
+<td>eCFR public API</td>
+<td>US public domain (17 USC §105)</td>
+<td><strong>Used</strong> (<code>us</code> adapter; govinfo key-gated, uscode.house.gov bot-gated — eCFR is the key-free regulatory channel)</td>
+</tr>
+<tr>
+<td>Justice Laws Website XML</td>
+<td>Crown copyright (non-commercial reproduction)</td>
+<td><strong>Used</strong> (<code>ca</code> adapter; legacy search has no machine endpoint, fetch-by-code only)</td>
+</tr>
 </tbody>
 </table>
 <p>Per-country channel status across Asia (robots verdicts, bot walls,
@@ -866,6 +876,15 @@ for sources that lack it.</p>
 <li><strong>LexML Brasil OAI-PMH</strong> — <code>www.lexml.gov.br/oai?verb=Identify</code>
   returns 404. Brazilian legislation needs a new channel before any
   <code>br</code> adapter is attempted.</li>
+<li><strong>eCFR human search UI</strong> (<code>/search</code>) — robots.txt <code>Disallow</code>; the
+  <code>/api/</code> tree is explicitly open, so the <code>us</code> adapter uses the API only.</li>
+<li><strong>govinfo api.data.gov without a key</strong> — <code>DEMO_KEY</code> is rate-limited
+  in probing (429s); usable only with a registered key, so the <code>us</code>
+  adapter does not depend on it.</li>
+<li><strong>uscode.house.gov</strong> — bot-gated / under maintenance during probing
+  (2026-10); statutes stay out of scope until the channel stabilises.</li>
+<li><strong>Justice Laws legacy Search.aspx to machines</strong> — returns the empty
+  form, not results; the <code>ca</code> adapter fetches by act code instead.</li>
 </ul>
 <h2 id="the-chosen-architecture-follows-from-the-verdicts">The chosen architecture follows from the verdicts<a class="headerlink" href="#the-chosen-architecture-follows-from-the-verdicts" title="Permanent link">&para;</a></h2>
 <p>Because official APIs beat scraping for every source we adopted, the

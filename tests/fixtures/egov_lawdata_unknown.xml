@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DataRoot>
+  <Result>
+    <Code>1</Code>
+    <Message>取得結果が０件でした。取得条件に誤りがないかご確認ください。</Message>
+  </Result>
+  <ApplData>
+    <LawId>NOPE123</LawId>
+    <LawNum/>
+    <LawFullText/>
+  </ApplData>
+</DataRoot>

@@ -27,7 +27,7 @@ type-check:
 audit:
     uv run --locked pip-audit
 
-# Check dependency licenses comply with MIT (needs network)
+# Check dependency licenses comply with Apache-2.0 (needs network)
 
 license-check:
     uv run --locked pip-licenses --from=mixed --partial-match --fail-on=GPL
@@ -50,3 +50,7 @@ docs-serve:
 # Run all quality checks
 
 check: lint type-check test
+
+# Full pipeline, order: upstream→downstream (offline suite, no network)
+pipeline:
+    uv run pytest -q

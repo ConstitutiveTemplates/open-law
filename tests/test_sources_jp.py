@@ -7,7 +7,6 @@ import pytest
 
 from tests.helpers import FixtureLoader, Offline, RecordingSite
 
-from open_law.sources.base import NotAvailableBySourceError
 from open_law.sources.jp import EgovAdapter
 
 _LAWS_URL = "https://laws.e-gov.go.jp/api/2/laws"
@@ -80,7 +79,42 @@ def test_search_without_laws_field_returns_empty(offline: Offline, recording_sit
     assert adapter.search("nothing") == []
 
 
-def test_fetch_requires_registration(offline: Offline, recording_site: RecordingSite) -> None:
+def test_fetch_parses_v1_lawdata_without_registration(
+    offline: Offline, recording_site: RecordingSite, fixture_text: FixtureLoader
+) -> None:
+    seen: list[str] = []
+    adapter = offline(
+        EgovAdapter,
+        recording_site({"/api/1/lawdata/325AC0000000041": fixture_text("egov_lawdata_325AC0000000041.xml")}, seen),
+    )
+    law = adapter.fetch("325AC0000000041")
+    assert law.source == "jp"
+    assert law.jurisdiction == "JP"
+    assert law.law_id == "325AC0000000041"
+    assert law.title == "日本勧業銀行法等を廃止する法律"
+    assert law.promulgation_date == "1950-03-31"
+    assert law.modified == "1950-03-31"
+    assert law.url == "https://laws.e-gov.go.jp/document?law_id=325AC0000000041"
+    assert law.language == "jpn"
+    assert law.text_url == "https://laws.e-gov.go.jp/api/1/lawdata/325AC0000000041"
+    assert ("format", "egov-law-xml") in law.extras
+    assert ("law_type", "Act") in law.extras
+    assert ("era", "Showa") in law.extras
+    assert seen == [
+        "https://laws.e-gov.go.jp/robots.txt",
+        "https://laws.e-gov.go.jp/api/1/lawdata/325AC0000000041",
+    ]
+
+
+def test_fetch_unknown_id_raises(offline: Offline, recording_site: RecordingSite, fixture_text: FixtureLoader) -> None:
+    adapter = offline(
+        EgovAdapter, recording_site({"/api/1/lawdata/999AC0000000000": fixture_text("egov_lawdata_unknown.xml")}, [])
+    )
+    with pytest.raises(ValueError, match="no law"):
+        adapter.fetch("999AC0000000000")
+
+
+def test_fetch_rejects_malformed_id(offline: Offline, recording_site: RecordingSite) -> None:
     adapter = offline(EgovAdapter, recording_site({}, []))
-    with pytest.raises(NotAvailableBySourceError, match=r"elsur\.e-gov\.go\.jp"):
-        adapter.fetch("325AC0000000041")
+    with pytest.raises(ValueError, match="Unrecognised e-Gov law id"):
+        adapter.fetch("not-an-id!!!")

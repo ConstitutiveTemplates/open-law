@@ -29,6 +29,7 @@ from open_law.models import Law
 from open_law.models import LawSummary
 from open_law.sources.base import NotAvailableBySourceError
 from open_law.sources.base import SourceAdapter
+from open_law.sources.base import strip_markup
 
 __all__ = ["JltAdapter"]
 
@@ -40,14 +41,6 @@ _TMX_RE = re.compile(r"download/(\d+)/23/([A-Za-z0-9._-]+\.tmx)")
 _TITLE_RE = re.compile(r"<title>(.*?)</title>", re.DOTALL | re.IGNORECASE)
 _PDF_RE = re.compile(r"download/(\d+)/14/([A-Za-z0-9._-]+\.pdf)")
 _TXT_RE = re.compile(r"download/(\d+)/13/([A-Za-z0-9._-]+\.txt)")
-_TAG_RE = re.compile(r"<[^>]+>")
-
-
-def _strip(text: str | None) -> str | None:
-    if text is None:
-        return None
-    clean = _TAG_RE.sub("", text).strip()
-    return clean or None
 
 
 class JltAdapter(SourceAdapter):
@@ -96,7 +89,7 @@ class JltAdapter(SourceAdapter):
         view_url = f"{_BASE}/en/laws/view/{lid}"
         body = self._get(view_url)
         title_m = _TITLE_RE.search(body)
-        raw = _strip(title_m.group(1)) if title_m else None
+        raw = strip_markup(title_m.group(1)) if title_m else None
         title = (raw or lid).split(" - ")[0].strip()  # drop " - Japanese/English - Japanese Law Translation"
         tmx = _TMX_RE.search(body)
         pdf = _PDF_RE.search(body)

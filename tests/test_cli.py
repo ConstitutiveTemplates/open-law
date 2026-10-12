@@ -65,7 +65,7 @@ def test_unknown_source_exits_with_error(capsys: pytest.CaptureFixture[str]) -> 
     with pytest.raises(SystemExit) as excinfo:
         cli.main(["fetch", "mars", "x"])
     assert excinfo.value.code == 2
-    assert "known sources: bd, ca, eu, jlt, jp, kr, la, np, uk, us" in capsys.readouterr().err
+    assert "known sources: bd, ca, de, eu, jlt, jp, kr, la, np, uk, us, us-tx" in capsys.readouterr().err
 
 
 def test_text_command_prints_plain_text(
@@ -309,12 +309,18 @@ def test_coverage_command_applies_expert_annotations(tmp_path: Path, capsys: pyt
     assert "missing 0 of 1" in out
 
 
-def test_unavailable_full_text_exits_with_error(capsys: pytest.CaptureFixture[str]) -> None:
-    """Jp full text needs registration: the CLI reports it as an error."""
-    with pytest.raises(SystemExit) as excinfo:
-        cli.main(["fetch", "jp", "325AC0000000041"])
-    assert excinfo.value.code == 2
-    assert "elsur.e-gov.go.jp" in capsys.readouterr().err
+def test_jp_fetch_prints_law_as_json(
+    capsys: pytest.CaptureFixture[str], offline: Offline, recording_site: RecordingSite, fixture_text: FixtureLoader
+) -> None:
+    """Jp full text is key-free via v1 lawdata: fetch prints the law JSON."""
+    adapter = offline(
+        EgovAdapter,
+        recording_site({"/api/1/lawdata/325AC0000000041": fixture_text("egov_lawdata_325AC0000000041.xml")}, []),
+    )
+    cli.main(["fetch", "jp", "325AC0000000041"], adapter_factory=lambda _source: adapter)
+    payload = cast("dict[str, object]", json.loads(capsys.readouterr().out))
+    assert payload["law_id"] == "325AC0000000041"
+    assert payload["title"] == "日本勧業銀行法等を廃止する法律"
 
 
 def test_missing_subcommand_exits_with_usage_error(capsys: pytest.CaptureFixture[str]) -> None:
@@ -343,3 +349,152 @@ def test_preflight_prints_judgement(monkeypatch: pytest.MonkeyPatch, capsys: pyt
     assert payload["url"] == "https://example.com/x"
     assert payload["allowed"] is True
     assert payload["request_budget"] == 100
+
+
+def test_fetch_wayback_flag_falls_back_on_network_failure(tmp_path, capsys) -> None:
+    """--wayback falls back to archive.org on HTTPError/5xx, and reports provenance on stderr."""
+    import httpx
+    from open_law.fetcher import FetchConfig, PoliteFetcher
+    from open_law.sources.base import SourceAdapter
+    from open_law.models import Law
+
+    class _FakeAdapter(SourceAdapter):
+        source_id = "fakestub"
+        name = "Fake"
+        jurisdiction = "XX"
+        homepage = "https://example.com"
+        license_note = "test"
+
+        def search(self, query: str, *, limit: int = 10):  # noqa: ARG002
+            return []
+
+        def fetch(self, law_id):
+            # One GET that will 500 then fall back via fetcher.
+            body = self._get(f"https://example.com/law/{law_id}")
+            return Law(
+                source=self.source_id,
+                jurisdiction=self.jurisdiction,
+                law_id=law_id,
+                title=body.strip(),
+                url=f"https://example.com/law/{law_id}",
+            )
+
+    wayback_body = json.dumps(
+        {
+            "archived_snapshots": {
+                "closest": {
+                    "available": True,
+                    "url": "https://web.archive.org/web/20200101000000/https://example.com/law/1",
+                    "timestamp": "20200101000000",
+                }
+            }
+        }
+    )
+    snapshot_html = "snapshot title"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        host = request.url.host
+        if path == "/robots.txt":
+            return httpx.Response(200, text="User-agent: *\nAllow: /\n")
+        if host == "archive.org" and path == "/wayback/available":
+            return httpx.Response(200, text=wayback_body, headers={"content-type": "application/json"})
+        if host == "web.archive.org":
+            return httpx.Response(200, text=snapshot_html)
+        if path == "/law/1":
+            return httpx.Response(500, text="boom")
+        return httpx.Response(404, text="miss")
+
+    config = FetchConfig(cache_dir=tmp_path / "cache", delay_seconds=0)
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    fetcher = PoliteFetcher(config, client=client)
+    adapter = _FakeAdapter(fetcher)
+    # Without --wayback, 500 raises.
+    import pytest as _pytest
+
+    with _pytest.raises(httpx.HTTPStatusError):
+        adapter.fetch("1")
+    # With --wayback, the CLI wires the flag and reports provenance.
+    # Build a fetcher with wayback on and prove the adapter fetch succeeds via snapshot.
+    config2 = FetchConfig(cache_dir=tmp_path / "cache2", delay_seconds=0, wayback_fallback=True)
+    client2 = httpx.Client(transport=httpx.MockTransport(handler))
+    fetcher2 = PoliteFetcher(config2, client=client2)
+    adapter2 = _FakeAdapter(fetcher2)
+    law = adapter2.fetch("1")
+    assert law.title == "snapshot title"
+    assert fetcher2.last_result is not None and fetcher2.last_result.from_wayback is True
+
+    # CLI wiring: fetch --wayback for a real registered adapter via injected factory.
+    # Reuse the fake adapter under a known source id via factory injection.
+    def _factory(_source):
+        # fresh fetcher so CLI's _enable_wayback flips wayback_fallback on this instance
+        c = FetchConfig(cache_dir=tmp_path / "cache3", delay_seconds=0)
+        cl = httpx.Client(transport=httpx.MockTransport(handler))
+        ft = PoliteFetcher(c, client=cl)
+        return _FakeAdapter(ft)
+
+    capsys.readouterr()  # drain
+    cli.main(["fetch", "bd", "1", "--wayback"], adapter_factory=_factory)
+    err = capsys.readouterr().err
+    assert "Wayback Machine" in err
+    assert "web.archive.org" in err
+
+
+def test_text_command_wayback_reports_snapshot(tmp_path, capsys) -> None:
+    import httpx
+    import json
+    from open_law.fetcher import FetchConfig, PoliteFetcher
+    from open_law.sources.base import SourceAdapter
+    from open_law.models import Law
+
+    class _Fake(SourceAdapter):
+        source_id = "fakestub2"
+        name = "Fake"
+        jurisdiction = "XX"
+        homepage = "https://example.com"
+        license_note = "test"
+
+        def search(self, query: str, *, limit: int = 10):  # noqa: ARG002
+            return []
+
+        def fetch(self, law_id):
+            return Law(
+                source=self.source_id,
+                jurisdiction=self.jurisdiction,
+                law_id=law_id,
+                title="t",
+                url="https://example.com/law/1",
+                text_url="https://example.com/law/1",
+            )
+
+    wayback_body = json.dumps(
+        {
+            "archived_snapshots": {
+                "closest": {
+                    "available": True,
+                    "url": "https://web.archive.org/web/20200101000000/https://example.com/law/1",
+                    "timestamp": "20200101000000",
+                }
+            }
+        }
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/robots.txt":
+            return httpx.Response(200, text="User-agent: *\nAllow: /\n")
+        if request.url.host == "archive.org":
+            return httpx.Response(200, text=wayback_body, headers={"content-type": "application/json"})
+        if request.url.host == "web.archive.org":
+            return httpx.Response(200, text="snapshot text")
+        return httpx.Response(500, text="boom")
+
+    def _factory(_source):
+        c = FetchConfig(cache_dir=tmp_path / "cache", delay_seconds=0)
+        cl = httpx.Client(transport=httpx.MockTransport(handler))
+        ft = PoliteFetcher(c, client=cl)
+        return _Fake(ft)
+
+    cli.main(["text", "bd", "1", "--wayback"], adapter_factory=_factory)
+    out = capsys.readouterr()
+    assert "snapshot text" in out.out
+    assert "Wayback Machine" in out.err

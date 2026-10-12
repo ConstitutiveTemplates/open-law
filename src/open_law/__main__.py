@@ -28,6 +28,7 @@ from argparse import ArgumentParser
 from collections.abc import Callable
 from collections.abc import Sequence
 from dataclasses import asdict
+from dataclasses import replace
 from typing import TextIO
 from typing import cast
 
@@ -53,6 +54,9 @@ __all__ = ["main"]
 
 AdapterFactory = Callable[[str], SourceAdapter]
 
+_WAYBACK_COMMANDS = ("fetch", "text", "dump")
+_ANALYSIS_COMMANDS = ("coverage", "correspond", "taxonomy")
+
 
 def _build_parser() -> ArgumentParser:
     """The CLI parser: shared by :func:`main` and its error paths."""
@@ -77,13 +81,12 @@ def _build_parser() -> ArgumentParser:
     search_parser.add_argument("query", help="title text to search for")
     search_parser.add_argument("--limit", type=int, default=10, help="max results (default 10)")
 
-    fetch_parser = subparsers.add_parser("fetch", help="fetch one law as JSON")
-    fetch_parser.add_argument("source", help="source id (see 'open-law sources')")
-    fetch_parser.add_argument("law_id", help="source-native id, e.g. 'ukpga/1989/6' or a CELEX")
-
-    text_parser = subparsers.add_parser("text", help="fetch one law's full text as plain text")
-    text_parser.add_argument("source", help="source id (see 'open-law sources')")
-    text_parser.add_argument("law_id", help="source-native id, e.g. 'ukpga/1989/6' or a CELEX")
+    _add_wayback_parser(subparsers, "fetch", "fetch one law as JSON")
+    _add_wayback_parser(subparsers, "text", "fetch one law's full text as plain text")
+    dump_parser = _add_wayback_parser(subparsers, "dump", "fetch several laws and consolidate as JSONL")
+    dump_parser.add_argument("law_ids", nargs="*", help="source-native ids (or use --ids-from)")
+    dump_parser.add_argument("--ids-from", help="file with one id per line ('-' for stdin)")
+    dump_parser.add_argument("--out", help="JSONL file to write (default: stdout)")
 
     coverage_parser = subparsers.add_parser(
         "coverage", help="country x topic coverage matrix from a dumped JSONL corpus"
@@ -109,13 +112,19 @@ def _build_parser() -> ArgumentParser:
 
     taxonomy_parser = subparsers.add_parser("taxonomy", help="export the built-in topic taxonomy for expert editing")
     taxonomy_parser.add_argument("--export", help="write the taxonomy JSON to this path ('-' for stdout)")
-
-    dump_parser = subparsers.add_parser("dump", help="fetch several laws and consolidate as JSONL")
-    dump_parser.add_argument("source", help="source id (see 'open-law sources')")
-    dump_parser.add_argument("law_ids", nargs="*", help="source-native ids (or use --ids-from)")
-    dump_parser.add_argument("--ids-from", help="file with one id per line ('-' for stdin)")
-    dump_parser.add_argument("--out", help="JSONL file to write (default: stdout)")
     return parser
+
+
+def _add_wayback_parser(
+    subparsers: argparse._SubParsersAction[ArgumentParser], name: str, help_text: str
+) -> ArgumentParser:
+    """A source-bound subcommand parser with ``source``/``law_id``/``--wayback``."""
+    cmd_parser = subparsers.add_parser(name, help=help_text)
+    cmd_parser.add_argument("source", help="source id (see 'open-law sources')")
+    if name != "dump":
+        cmd_parser.add_argument("law_id", help="source-native id, e.g. 'ukpga/1989/6' or a CELEX")
+    cmd_parser.add_argument("--wayback", action="store_true", help="fall back to the Wayback Machine on failure")
+    return cmd_parser
 
 
 def _print_json(payload: object) -> None:
@@ -144,10 +153,23 @@ def _cmd_search(adapter: SourceAdapter, query: str, limit: int) -> None:
     _print_json([asdict(summary) for summary in results])
 
 
+def _maybe_print_wayback(adapter: SourceAdapter) -> None:
+    """When the adapter's last fetch used Wayback, report it on stderr."""
+    result = getattr(adapter.fetcher, "last_result", None)
+    if result is not None and getattr(result, "from_wayback", False):
+        ts = getattr(result, "wayback_timestamp", None) or ""
+        url = getattr(result, "wayback_url", None) or ""
+        msg = f"from Wayback Machine: {url}"
+        if ts:
+            msg += f" (timestamp {ts})"
+        print(msg, file=sys.stderr)
+
+
 def _cmd_fetch(adapter: SourceAdapter, law_id: str) -> None:
     """Print one fetched law as a JSON object."""
     law: Law = adapter.fetch(law_id)
     _print_json(asdict(law))
+    _maybe_print_wayback(adapter)
 
 
 def _open_corpus(corpus_path: str) -> TextIO:
@@ -155,6 +177,18 @@ def _open_corpus(corpus_path: str) -> TextIO:
     if corpus_path == "-":
         return sys.stdin
     return pathlib.Path(corpus_path).open(encoding="utf-8")
+
+
+def _with_annotation_topics(
+    topics: dict[str, tuple[str, ...]], annotations: dict[str, tuple[str, ...]] | None
+) -> dict[str, tuple[str, ...]]:
+    """The taxonomy overlaid with expert annotations (annotation topics added)."""
+    all_topics = dict(topics)
+    if annotations:
+        for annotated in annotations.values():
+            for topic in annotated:
+                all_topics.setdefault(topic, (topic,))
+    return all_topics
 
 
 def _cmd_coverage(
@@ -167,11 +201,7 @@ def _cmd_coverage(
     """Print the country-by-topic coverage matrix for a dumped corpus."""
     topics = load_taxonomy(taxonomy_path)
     annotations = load_annotations(annotations_path) if annotations_path else None
-    all_topics = dict(topics)
-    if annotations:
-        for annotated in annotations.values():
-            for topic in annotated:
-                all_topics.setdefault(topic, (topic,))
+    all_topics = _with_annotation_topics(topics, annotations)
     corpus = _open_corpus(corpus_path)
     try:
         matrix = coverage_matrix(corpus, topics, annotations)
@@ -203,11 +233,6 @@ def _cmd_correspond(
     """Print candidate cross-country correspondences for human review."""
     topics = load_taxonomy(taxonomy_path)
     annotations = load_annotations(annotations_path) if annotations_path else None
-    all_topics = dict(topics)
-    if annotations:
-        for annotated in annotations.values():
-            for topic in annotated:
-                all_topics.setdefault(topic, (topic,))
     corpus = _open_corpus(corpus_path)
     try:
         entries = list(iter_corpus(corpus))
@@ -264,6 +289,7 @@ def _read_ids(ids_from: str | None, law_ids: list[str]) -> list[str]:
 def _cmd_text(adapter: SourceAdapter, law_id: str) -> None:
     """Print one law's full text as plain text."""
     print(adapter.full_text(law_id))
+    _maybe_print_wayback(adapter)
 
 
 def _cmd_dump(adapter: SourceAdapter, law_ids: list[str], out_path: str | None) -> None:
@@ -278,6 +304,7 @@ def _cmd_dump(adapter: SourceAdapter, law_ids: list[str], out_path: str | None) 
     else:
         with pathlib.Path(out_path).open("w", encoding="utf-8") as out:
             dump_jsonl(laws, out)
+    _maybe_print_wayback(adapter)
 
 
 def _run_analysis_commands(command: str, parsed: argparse.Namespace) -> None:
@@ -301,6 +328,41 @@ def _run_analysis_commands(command: str, parsed: argparse.Namespace) -> None:
         _cmd_taxonomy(cast("str | None", parsed.export))
 
 
+def _enable_wayback(adapter: SourceAdapter) -> None:
+    """Enable Wayback fallback on *adapter*'s fetcher in place."""
+    cfg = adapter.fetcher.config
+    if not cfg.wayback_fallback:
+        adapter.fetcher.config = replace(cfg, wayback_fallback=True)
+
+
+def _open_wayback_adapter(factory: AdapterFactory, parsed: argparse.Namespace) -> SourceAdapter:
+    """Build the adapter for a source-bound command, honouring ``--wayback``."""
+    adapter = factory(cast("str", parsed.source))
+    if getattr(parsed, "wayback", False):
+        _enable_wayback(adapter)
+    return adapter
+
+
+def _run_source_commands(command: str, parsed: argparse.Namespace, factory: AdapterFactory) -> None:
+    """Dispatch the adapter-bound subcommands (search/fetch/text/dump)."""
+    if command == "search":
+        _cmd_search(
+            factory(cast("str", parsed.source)),
+            cast("str", parsed.query),
+            cast("int", parsed.limit),
+        )
+    elif command == "fetch":
+        _cmd_fetch(_open_wayback_adapter(factory, parsed), cast("str", parsed.law_id))
+    elif command == "text":
+        _cmd_text(_open_wayback_adapter(factory, parsed), cast("str", parsed.law_id))
+    elif command == "dump":
+        _cmd_dump(
+            _open_wayback_adapter(factory, parsed),
+            _read_ids(cast("str | None", parsed.ids_from), cast("list[str]", parsed.law_ids)),
+            cast("str | None", parsed.out),
+        )
+
+
 def main(
     args: Sequence[str] | None = None,
     *,
@@ -318,28 +380,14 @@ def main(
     command = getattr(parsed, "command", None)
     logger.info("open_law_invoked", command=command)
     try:
-        if command in ("coverage", "correspond", "taxonomy"):
+        if command in _ANALYSIS_COMMANDS:
             _run_analysis_commands(cast("str", command), parsed)
         elif command == "sources":
             _cmd_sources()
         elif command == "preflight":
             _cmd_preflight(cast("str", parsed.url))
-        elif command == "search":
-            _cmd_search(
-                build_adapter(cast("str", parsed.source)),
-                cast("str", parsed.query),
-                cast("int", parsed.limit),
-            )
-        elif command == "fetch":
-            _cmd_fetch(build_adapter(cast("str", parsed.source)), cast("str", parsed.law_id))
-        elif command == "text":
-            _cmd_text(build_adapter(cast("str", parsed.source)), cast("str", parsed.law_id))
-        elif command == "dump":
-            _cmd_dump(
-                build_adapter(cast("str", parsed.source)),
-                _read_ids(cast("str | None", parsed.ids_from), cast("list[str]", parsed.law_ids)),
-                cast("str | None", parsed.out),
-            )
+        elif command in (*_WAYBACK_COMMANDS, "search"):
+            _run_source_commands(cast("str", command), parsed, build_adapter)
     except (ValueError, RuntimeError, LookupError, TypeError) as exc:
         parser.exit(2, f"open-law: error: {exc}\n")
 

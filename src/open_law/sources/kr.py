@@ -18,10 +18,8 @@ from __future__ import annotations
 
 import os
 import urllib.parse
-import xml.etree.ElementTree as ET
 from typing import ClassVar
 
-from defusedxml.ElementTree import fromstring
 from typing_extensions import override
 
 from open_law.dates import to_iso_date
@@ -29,6 +27,9 @@ from open_law.models import Law
 from open_law.models import LawSummary
 from open_law.sources.base import NotAvailableBySourceError
 from open_law.sources.base import SourceAdapter
+from open_law.sources.base import clamp_limit
+from open_law.sources.base import parse_xml
+from open_law.sources.base import xml_child_text
 
 __all__ = ["KoreaLawAdapter"]
 
@@ -41,19 +42,6 @@ _EXTRAS_TAGS: tuple[tuple[str, str], ...] = (
     ("제개정구분", "amendment_kind"),
     ("공포번호", "promulgation_number"),
 )
-
-
-def _text_of(element: ET.Element | None) -> str | None:
-    """Stripped text of *element*, or None when empty/absent."""
-    if element is None or element.text is None:
-        return None
-    stripped = element.text.strip()
-    return stripped or None
-
-
-def _child_text(parent: ET.Element, tag: str) -> str | None:
-    """Stripped text of *parent*'s first child named *tag*."""
-    return _text_of(parent.find(tag))
 
 
 class KoreaLawAdapter(SourceAdapter):
@@ -79,19 +67,15 @@ class KoreaLawAdapter(SourceAdapter):
             raise NotAvailableBySourceError(msg)
         url = f"{_BASE}/lawSearch.do?target=law&type=XML&query={urllib.parse.quote(query)}&OC={urllib.parse.quote(oc)}"
         body = self._get(url)
-        try:
-            root = fromstring(body)
-        except ET.ParseError as exc:
-            msg = f"law.go.kr returned malformed XML for query {query!r}"
-            raise ValueError(msg) from exc
+        root = parse_xml(body, f"law.go.kr returned malformed XML for query {query!r}")
         summaries: list[LawSummary] = []
         for entry in root.findall("laws/law"):
-            law_id = _child_text(entry, "법령ID")
-            title = _child_text(entry, "법령명한글") or _child_text(entry, "법령명영문")
+            law_id = xml_child_text(entry, "법령ID")
+            title = xml_child_text(entry, "법령명한글") or xml_child_text(entry, "법령명영문")
             if law_id is None or title is None:
                 continue
-            promulgation_raw = _child_text(entry, "공포일자")
-            extras = tuple((key, text) for tag, key in _EXTRAS_TAGS if (text := _child_text(entry, tag)) is not None)
+            promulgation_raw = xml_child_text(entry, "공포일자")
+            extras = tuple((key, text) for tag, key in _EXTRAS_TAGS if (text := xml_child_text(entry, tag)) is not None)
             if promulgation_raw is not None:
                 extras = (("promulgation_date_raw", promulgation_raw), *extras)
             summaries.append(
@@ -101,11 +85,11 @@ class KoreaLawAdapter(SourceAdapter):
                     law_id=law_id,
                     title=title,
                     promulgation_date=to_iso_date(promulgation_raw),
-                    url=_child_text(entry, "detailLink"),
+                    url=xml_child_text(entry, "detailLink"),
                     extras=extras,
                 )
             )
-        return summaries[: max(1, limit)]
+        return summaries[: clamp_limit(limit)]
 
     @override
     def fetch(self, law_id: str) -> Law:

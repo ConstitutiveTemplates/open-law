@@ -32,6 +32,7 @@ from open_law.models import Law
 from open_law.models import LawSummary
 from open_law.sources.base import NotAvailableBySourceError
 from open_law.sources.base import SourceAdapter
+from open_law.sources.base import strip_markup
 
 __all__ = ["JusticeLawsAdapter"]
 
@@ -43,19 +44,11 @@ _TITLE_RE = re.compile(r"<(?:LongTitle|ShortTitle)[^>]*>(.*?)</(?:LongTitle|Shor
 _PIT_RE = re.compile(r'pit-date="([^"]+)"')
 _INFORCE_RE = re.compile(r'in-force="([^"]+)"')
 _AMENDED_RE = re.compile(r'lastAmendedDate="([^"]+)"')
-_TAG_RE = re.compile(r"<[^>]+>")
 
 
 def _today() -> str:
     """Fallback modified date when the XML carries no point-in-time stamp."""
     return dt.datetime.now(dt.UTC).date().isoformat()
-
-
-def _strip(text: str | None) -> str | None:
-    if text is None:
-        return None
-    clean = _TAG_RE.sub("", text).strip()
-    return clean or None
 
 
 def _normalise_code(law_id: str) -> str | None:
@@ -119,7 +112,7 @@ class JusticeLawsAdapter(SourceAdapter):
             raise ValueError(msg)
         url = f"{_BASE}/eng/XML/{code}.xml"
         body = self._get(url)
-        titles = [_strip(m.group(1)) for m in _TITLE_RE.finditer(body)]
+        titles = [strip_markup(m.group(1)) for m in _TITLE_RE.finditer(body)]
         titles = [t for t in titles if t]
         # ShortTitle renders first in practice, but take the *shortest*
         # candidate as the display title — robust to tag order.

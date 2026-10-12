@@ -57,6 +57,8 @@ __all__ = [
     "AccessDeniedError",
     "BudgetExceededError",
     "FetchConfig",
+    "FetchResult",
+    "FetchTextResult",
     "PoliteFetcher",
     "Preflight",
     "RobotDeniedError",
@@ -162,12 +164,95 @@ class FetchConfig:
     cache_dir: Path = Path(".cache/fetcher")
     user_agent: str = ""
     max_requests_per_host: int = 100
+    wayback_fallback: bool = False
 
     def resolved_user_agent(self) -> str:
         """Contactable User-Agent identifying this project."""
         if self.user_agent:
             return self.user_agent
         return f"{self.project_name}/0.1 (+mailto:{self.contact})"
+
+
+@dataclass(frozen=True)
+class FetchResult:
+    """Result of a polite fetch, with Wayback provenance when used."""
+
+    text: str
+    url: str
+    from_wayback: bool = False
+    wayback_url: str | None = None
+    wayback_timestamp: str | None = None
+
+
+class FetchTextResult(str):
+    """A ``str`` that also carries Wayback provenance.
+
+    ``PoliteFetcher.fetch_text`` returns this so callers that treat the
+    result as a plain string keep working while CLI and tests can inspect
+    ``from_wayback`` / ``wayback_url`` / ``wayback_timestamp``.
+    """
+
+    from_wayback: bool
+    wayback_url: str | None
+    wayback_timestamp: str | None
+
+    def __new__(  # type: ignore[misc]
+        cls,
+        text: str,
+        *,
+        from_wayback: bool = False,
+        wayback_url: str | None = None,
+        wayback_timestamp: str | None = None,
+    ) -> Self:
+        obj = super().__new__(cls, text)
+        obj.from_wayback = from_wayback
+        obj.wayback_url = wayback_url
+        obj.wayback_timestamp = wayback_timestamp
+        return obj
+
+
+def _http_parts(url: str) -> urllib.parse.SplitResult:
+    """Split *url*, refusing non-http(s) URLs with the shared message."""
+    parts = urllib.parse.urlsplit(url)
+    if parts.scheme not in ("http", "https"):
+        msg = f"refusing to fetch non-http(s) URL: {url!r}"
+        raise ValueError(msg)
+    return parts
+
+
+def _access_denied(target: str, status: int) -> AccessDeniedError:
+    """The access-denied error for *target* (origin or URL) and *status*."""
+    msg = f"access denied by {target!r} (HTTP {status}): use its API or ask permission"
+    return AccessDeniedError(msg)
+
+
+def _is_feed_response(response: httpx.Response) -> bool:
+    """True when *response* looks like a feed (XML type or rss/feed body)."""
+    content_type = cast("str", response.headers.get("content-type", ""))
+    body = response.text[:500].lower()
+    return "xml" in content_type or "<rss" in body or "<feed" in body
+
+
+def _closest_snapshot(data: object) -> tuple[str | None, str | None]:
+    """(snapshot_url, timestamp) in a Wayback availability payload, else Nones."""
+    if not isinstance(data, dict):
+        return None, None
+    payload = cast("dict[str, object]", data)
+    archived = payload.get("archived_snapshots")
+    if not isinstance(archived, dict):
+        return None, None
+    closest = cast("dict[str, object]", archived).get("closest")
+    if not isinstance(closest, dict):
+        return None, None
+    closest_d = cast("dict[str, object]", closest)
+    if not closest_d.get("available"):
+        return None, None
+    snap_url = closest_d.get("url")
+    timestamp = closest_d.get("timestamp")
+    if not isinstance(snap_url, str) or not snap_url:
+        return None, None
+    ts = timestamp if isinstance(timestamp, str) else None
+    return snap_url, ts
 
 
 def _robots_parser(base_url: str, client: httpx.Client) -> urllib.robotparser.RobotFileParser:
@@ -235,6 +320,8 @@ class PoliteFetcher:
     config: FetchConfig
     _client: httpx.Client
     _owns_client: bool
+    # Last fetch provenance, set after each fetch_text/fetch_bytes.
+    last_result: FetchResult | None = None
 
     def __init__(
         self,
@@ -257,6 +344,7 @@ class PoliteFetcher:
         else:
             self._client = client
             self._owns_client = False
+        self.last_result = None
 
     def close(self) -> None:
         """Close the owned httpx client (no-op for injected clients)."""
@@ -283,28 +371,14 @@ class PoliteFetcher:
         decide what to fetch.
         """
         config = self.config
-        parts = urllib.parse.urlsplit(url)
-        if parts.scheme not in ("http", "https"):
-            msg = f"refusing to fetch non-http(s) URL: {url!r}"
-            raise ValueError(msg)
+        parts = _http_parts(url)
         origin = f"{parts.scheme}://{parts.netloc}"
         host = parts.netloc
         self._check_budget(host)
         count = _REQUEST_COUNTS.get(host, 0)
-        try:
-            probe = self._counted_head(url)
-            if probe.status_code in (404, 405):
-                probe = self._counted_get(url)
-        except httpx.HTTPError as exc:
-            msg = f"preflight probe failed for {url!r}: {exc}"
-            raise AccessDeniedError(msg) from exc
-        if probe.status_code in (401, 403):
-            msg = f"access denied by {origin!r} (HTTP {probe.status_code}): use its API or ask permission"
-            raise AccessDeniedError(msg)
-        had_robots = origin in _ROBOTS_CACHE
-        parser = _robots_parser(url, self._client)
-        if not had_robots:
-            _REQUEST_COUNTS[host] = _REQUEST_COUNTS.get(host, 0) + 1
+        probe = self._probe_page(url)
+        self._deny_if_blocked(probe, origin)
+        parser = self._robots_parser_counted(url)
         allowed = parser.can_fetch(config.resolved_user_agent(), url)
         if not allowed:
             msg = f"robots.txt disallows fetching {url!r}"
@@ -320,6 +394,33 @@ class PoliteFetcher:
             request_budget=config.max_requests_per_host,
         )
 
+    def _probe_page(self, url: str) -> httpx.Response:
+        """HEAD *url* (GET on 404/405); transport failures deny access."""
+        try:
+            probe = self._counted_head(url)
+            if probe.status_code in (404, 405):
+                probe = self._counted_get(url)
+        except httpx.HTTPError as exc:
+            msg = f"preflight probe failed for {url!r}: {exc}"
+            raise AccessDeniedError(msg) from exc
+        return probe
+
+    def _deny_if_blocked(self, probe: httpx.Response, origin: str) -> None:
+        """Raise when the preflight *probe* shows the site denied access."""
+        if probe.status_code in (401, 403):
+            raise _access_denied(origin, probe.status_code)
+
+    def _robots_parser_counted(self, url: str) -> urllib.robotparser.RobotFileParser:
+        """The robots.txt parser for *url*'s origin, counting its one fetch."""
+        parts = urllib.parse.urlsplit(url)
+        origin = f"{parts.scheme}://{parts.netloc}"
+        host = parts.netloc
+        had_robots = origin in _ROBOTS_CACHE
+        parser = _robots_parser(url, self._client)
+        if not had_robots:
+            _REQUEST_COUNTS[host] = _REQUEST_COUNTS.get(host, 0) + 1
+        return parser
+
     def _check_budget(self, host: str) -> None:
         """Raise BudgetExceededError when *host* exhausted its session budget."""
         count = _REQUEST_COUNTS.get(host, 0)
@@ -331,21 +432,24 @@ class PoliteFetcher:
             )
             raise BudgetExceededError(msg)
 
-    def _counted_head(self, url: str) -> httpx.Response:
-        """HEAD probe that counts toward the host session budget."""
+    def _counted(self, method: str, url: str) -> httpx.Response:
+        """Budget-checked *method* request counting toward the host budget."""
         host = urllib.parse.urlsplit(url).netloc
         self._check_budget(host)
-        response = self._client.head(url, timeout=self.config.timeout_seconds)
+        if method == "HEAD":
+            response = self._client.head(url, timeout=self.config.timeout_seconds)
+        else:
+            response = self._client.get(url, timeout=self.config.timeout_seconds)
         _REQUEST_COUNTS[host] = _REQUEST_COUNTS.get(host, 0) + 1
         return response
 
+    def _counted_head(self, url: str) -> httpx.Response:
+        """HEAD probe that counts toward the host session budget."""
+        return self._counted("HEAD", url)
+
     def _counted_get(self, url: str) -> httpx.Response:
         """GET probe that counts toward the host session budget."""
-        host = urllib.parse.urlsplit(url).netloc
-        self._check_budget(host)
-        response = self._client.get(url, timeout=self.config.timeout_seconds)
-        _REQUEST_COUNTS[host] = _REQUEST_COUNTS.get(host, 0) + 1
-        return response
+        return self._counted("GET", url)
 
     def _discover(
         self, origin: str, parser: urllib.robotparser.RobotFileParser, agent: str
@@ -391,9 +495,7 @@ class PoliteFetcher:
                 continue
             if response.status_code != 200:
                 continue
-            content_type = cast("str", response.headers.get("content-type", ""))
-            body = response.text[:500].lower()
-            if "xml" in content_type or "<rss" in body or "<feed" in body:
+            if _is_feed_response(response):
                 return candidate
         return None
 
@@ -417,22 +519,139 @@ class PoliteFetcher:
         the origin for feeds would only add load — robots.txt, budget,
         and the access denial rules still apply in full.
         """
-        parts = urllib.parse.urlsplit(url)
-        if parts.scheme not in ("http", "https"):
-            msg = f"refusing to fetch non-http(s) URL: {url!r}"
-            raise ValueError(msg)
-        host = parts.netloc
-        self._check_budget(host)
-        origin = f"{parts.scheme}://{parts.netloc}"
-        had_robots = origin in _ROBOTS_CACHE
-        parser = _robots_parser(url, self._client)
-        if not had_robots:
-            _REQUEST_COUNTS[host] = _REQUEST_COUNTS.get(host, 0) + 1
+        parts = _http_parts(url)
+        self._check_budget(parts.netloc)
+        parser = self._robots_parser_counted(url)
         if not parser.can_fetch(self.config.resolved_user_agent(), url):
             msg = f"robots.txt disallows fetching {url!r}"
             raise RobotDeniedError(msg)
 
-    def fetch_text(self, url: str, *, discover: bool = True) -> str:
+    def _query_wayback(self, url: str) -> tuple[str | None, str | None]:
+        """Query the Wayback availability API for *url*.
+
+        Returns ``(snapshot_url, timestamp)`` when available, else
+        ``(None, None)``. Failures are treated as unavailable.
+        """
+        api_url = f"https://archive.org/wayback/available?url={urllib.parse.quote(url, safe='')}"
+        try:
+            resp = self._client.get(api_url, timeout=self.config.timeout_seconds)
+        except httpx.HTTPError:
+            return None, None
+        if resp.status_code != 200:
+            return None, None
+        try:
+            data = cast("object", json.loads(resp.text))
+        except (ValueError, json.JSONDecodeError):
+            return None, None
+        return _closest_snapshot(data)
+
+    def _fetch_via_wayback(self, url: str) -> FetchResult | None:
+        """Try the Wayback Machine for *url*; None when unavailable."""
+        snap_url, timestamp = self._query_wayback(url)
+        if snap_url is None:
+            return None
+        try:
+            resp = self._client.get(snap_url, timeout=self.config.timeout_seconds)
+        except httpx.HTTPError:
+            return None
+        if resp.status_code != 200:
+            return None
+        text = resp.text
+        _write_cache(url, text, self.config)
+        # Count the snapshot fetch toward the wayback host budget (best-effort).
+        try:
+            host = urllib.parse.urlsplit(snap_url).netloc
+            _REQUEST_COUNTS[host] = _REQUEST_COUNTS.get(host, 0) + 1
+        except Exception:
+            pass
+        return FetchResult(text=text, url=url, from_wayback=True, wayback_url=snap_url, wayback_timestamp=timestamp)
+
+    def _resolve_url(self, url: str, *, discover: bool) -> str:
+        """Gate *url* and switch to the discovered feed when told to."""
+        if discover:
+            judged = self.preflight(url)
+            if judged.should_use_feed:
+                url = judged.feed_url or url
+        else:
+            self._robots_gate(url)
+        return url
+
+    def _wait_for_slot(self, host: str) -> None:
+        """Sleep until *host*'s rate-limit delay has elapsed, then stamp it."""
+        now = time.monotonic()
+        last = _LAST_FETCH_AT.get(host, 0.0)
+        wait = self.config.delay_seconds - (now - last)
+        if wait > 0:
+            time.sleep(wait)
+        _LAST_FETCH_AT[host] = time.monotonic()
+
+    def _wayback_for_error_status(self, url: str, response: httpx.Response) -> FetchResult | None:
+        """Wayback result for a 5xx *response*; else raise; None on success."""
+        if response.status_code >= 500 and self.config.wayback_fallback:
+            wb = self._fetch_via_wayback(url)
+            if wb is not None:
+                self.last_result = wb
+                return wb
+        response.raise_for_status()
+        return None
+
+    def _wayback_on_transport_error(self, url: str) -> FetchResult | None:
+        """Wayback result after a transport failure; None when not attempted/found."""
+        if self.config.wayback_fallback:
+            wb = self._fetch_via_wayback(url)
+            if wb is not None:
+                self.last_result = wb
+                return wb
+        return None
+
+    def fetch_result(self, url: str, *, discover: bool = True) -> FetchResult:
+        """GET *url* politely, returning a :class:`FetchResult` with provenance.
+
+        When ``wayback_fallback`` is on, network errors (``httpx.HTTPError``)
+        or 5xx responses fall back to the Wayback Machine (``4xx`` never
+        does — the charter forbids bypassing access control). The snapshot
+        URL and timestamp are carried on the result so the CLI can report
+        them.
+        """
+        config = self.config
+        url = self._resolve_url(url, discover=discover)
+        host = urllib.parse.urlsplit(url).netloc
+        self._wait_for_slot(host)
+        cached_text = _read_cache(url, config)
+        if cached_text is not None:
+            result = FetchResult(text=cached_text, url=url)
+            self.last_result = result
+            return result
+        # Network path: fetch the page, falling back to Wayback on
+        # httpx transport failures or 5xx — never on 4xx.
+        response: httpx.Response | None = None
+        try:
+            response = self._counted_get(url)
+            if response.status_code in (401, 403):
+                raise _access_denied(url, response.status_code)
+            wb = self._wayback_for_error_status(url, response)
+            if wb is not None:
+                return wb
+        except (AccessDeniedError, RobotDeniedError, BudgetExceededError):
+            raise
+        except httpx.HTTPStatusError as exc:
+            # 4xx/5xx surfaced by raise_for_status — only 5xx already handled above.
+            # Re-raise; Wayback was already attempted for 5xx.
+            raise exc from None
+        except httpx.HTTPError:
+            wb = self._wayback_on_transport_error(url)
+            if wb is not None:
+                return wb
+            raise
+        # Success path: 2xx.
+        assert response is not None
+        text = response.text
+        _write_cache(url, text, config)
+        result = FetchResult(text=text, url=url)
+        self.last_result = result
+        return result
+
+    def fetch_text(self, url: str, *, discover: bool = True) -> FetchTextResult:
         """GET *url* politely: preflight judgement, rate limit, cached GET.
 
         Runs :meth:`preflight` first (feed/API discovery, robots.txt,
@@ -446,38 +665,47 @@ class PoliteFetcher:
         still apply. Use it for adapter-style fetches so the discovery
         probes — and a feed switch that would swap the API URL for a
         feed — cannot get in the way.
+
+        When ``FetchConfig.wayback_fallback`` is enabled, network failures
+        (DNS, timeouts, ``httpx.HTTPError``) and 5xx responses fall back
+        to ``https://archive.org/wayback/available?url=`` (4xx never does).
+        The return value exposes ``from_wayback`` / ``wayback_url`` /
+        ``wayback_timestamp`` and ``last_result`` is also updated.
         """
-        config = self.config
-        if discover:
-            judged = self.preflight(url)
-            if judged.should_use_feed:
-                # Safe: preflight denied the requested path already, and
-                # _discover drops robots-disallowed feed paths — feed_url is
-                # always fetchable when returned.
-                url = judged.feed_url or url
-        else:
-            self._robots_gate(url)
-        parts = urllib.parse.urlsplit(url)
-        host = parts.netloc
-        now = time.monotonic()
-        last = _LAST_FETCH_AT.get(host, 0.0)
-        wait = config.delay_seconds - (now - last)
-        if wait > 0:
-            time.sleep(wait)
-        _LAST_FETCH_AT[host] = time.monotonic()
-        cached_text = _read_cache(url, config)
-        if cached_text is not None:
-            return cached_text
-        self._check_budget(host)
-        response = self._client.get(url, timeout=config.timeout_seconds)
-        _REQUEST_COUNTS[host] = _REQUEST_COUNTS.get(host, 0) + 1
-        if response.status_code in (401, 403):
-            msg = f"access denied by {url!r} (HTTP {response.status_code}): use its API or ask permission"
-            raise AccessDeniedError(msg)
-        response.raise_for_status()
-        text = response.text
-        _write_cache(url, text, config)
-        return text
+        result = self.fetch_result(url, discover=discover)
+        return FetchTextResult(
+            result.text,
+            from_wayback=result.from_wayback,
+            wayback_url=result.wayback_url,
+            wayback_timestamp=result.wayback_timestamp,
+        )
+
+    def fetch_bytes(self, url: str, *, discover: bool = False) -> bytes:
+        """GET *url* as bytes (for PDFs and other binary documents)."""
+        # Reuse the same politeness gate as fetch_text, but return raw bytes.
+        # Binary responses are not cached as text; cache the decoded text
+        # when the server sent text, otherwise skip the text cache.
+        url = self._resolve_url(url, discover=discover)
+        host = urllib.parse.urlsplit(url).netloc
+        self._wait_for_slot(host)
+        try:
+            response = self._counted_get(url)
+            if response.status_code in (401, 403):
+                raise _access_denied(url, response.status_code)
+            wb = self._wayback_for_error_status(url, response)
+            if wb is not None:
+                return wb.text.encode("utf-8")
+            data = response.content
+            # Update last_result for provenance (text view for CLI).
+            self.last_result = FetchResult(text=data.decode("utf-8", errors="replace"), url=url)
+            return data
+        except (AccessDeniedError, RobotDeniedError, BudgetExceededError):
+            raise
+        except httpx.HTTPError:
+            wb = self._wayback_on_transport_error(url)
+            if wb is not None:
+                return wb.text.encode("utf-8")
+            raise
 
 
 def preflight(url: str, config: FetchConfig | None = None) -> Preflight:
@@ -486,7 +714,7 @@ def preflight(url: str, config: FetchConfig | None = None) -> Preflight:
         return fetcher.preflight(url)
 
 
-def fetch_text(url: str, config: FetchConfig | None = None) -> str:
+def fetch_text(url: str, config: FetchConfig | None = None) -> FetchTextResult:
     """One-shot polite GET (opens and closes its own fetcher)."""
     with PoliteFetcher(config) as fetcher:
         return fetcher.fetch_text(url)

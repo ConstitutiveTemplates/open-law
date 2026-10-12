@@ -16,33 +16,29 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 from typing import ClassVar
 
-from defusedxml.ElementTree import fromstring
 from typing_extensions import override
 
 from open_law.models import Law
 from open_law.models import LawSummary
 from open_law.sources.base import NotAvailableBySourceError
 from open_law.sources.base import SourceAdapter
+from open_law.sources.base import child_by_local
+from open_law.sources.base import parse_xml
+from open_law.sources.base import xml_text
 
 __all__ = ["LegislationGovUkAdapter"]
 
 _BASE = "https://www.legislation.gov.uk"
 
 
-def _child_by_local(parent: ET.Element, local: str) -> ET.Element | None:
-    """First child of *parent* whose tag ends with *local* (any namespace)."""
-    for child in parent:
-        if child.tag.rpartition("}")[2] == local:
-            return child
-    return None
+def _metadata(root: ET.Element) -> ET.Element | None:
+    """The document's ``Metadata`` element (any namespace), if present."""
+    return child_by_local(root, "Metadata")
 
 
-def _text_of(element: ET.Element | None) -> str | None:
-    """Stripped text of *element*, or None when empty/absent."""
-    if element is None or element.text is None:
-        return None
-    stripped = element.text.strip()
-    return stripped or None
+def _meta_text(root: ET.Element, local: str) -> str | None:
+    """Stripped ``Metadata/<local>`` text, or None when empty/absent."""
+    return xml_text(child_by_local(_metadata(root), local))
 
 
 class LegislationGovUkAdapter(SourceAdapter):
@@ -62,19 +58,14 @@ class LegislationGovUkAdapter(SourceAdapter):
         law_id = law_id.strip("/")
         url = f"{_BASE}/{law_id}/data.xml"
         body = self._get(url)
-        try:
-            root = fromstring(body)
-        except ET.ParseError as exc:
-            msg = f"legislation.gov.uk returned malformed XML for {law_id!r}"
-            raise ValueError(msg) from exc
+        root = parse_xml(body, f"legislation.gov.uk returned malformed XML for {law_id!r}")
         uri = root.attrib.get("DocumentURI") or url
-        metadata = _child_by_local(root, "Metadata")
-        title = _text_of(_child_by_local(metadata, "title") if metadata is not None else None)
+        title = _meta_text(root, "title")
         extras = [
             ("legislation_type", _root_type(root)),
-            ("publisher", _text_of(_child_by_local(metadata, "publisher")) if metadata is not None else None),
+            ("publisher", _meta_text(root, "publisher")),
             ("provisions", root.attrib.get("NumberOfProvisions")),
-            ("valid_from", _text_of(_child_by_local(metadata, "valid")) if metadata is not None else None),
+            ("valid_from", _meta_text(root, "valid")),
         ]
         return Law(
             source=self.source_id,
@@ -82,8 +73,8 @@ class LegislationGovUkAdapter(SourceAdapter):
             law_id=law_id,
             title=title or uri,
             url=uri,
-            language=_text_of(_child_by_local(metadata, "language") if metadata is not None else None),
-            modified=_text_of(_child_by_local(metadata, "modified") if metadata is not None else None),
+            language=_meta_text(root, "language"),
+            modified=_meta_text(root, "modified"),
             text_url=url,
             akn_url=f"{_BASE}/{law_id}/data.akn",
             extras=tuple((key, value) for key, value in extras if value),

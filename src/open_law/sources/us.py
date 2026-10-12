@@ -1,29 +1,19 @@
 """United States eCFR adapter — the official electronic Code of Federal Regulations.
 
-The CFR is where most US federal *regulatory* law lives as machine-readable
-text: FTC rules (COPPA, Safeguards), FDA regulations, export controls, and
-agency rules that carry the force of law. For a compliance corpus it is the
-highest-yield US channel — statutes (US Code) sit on a separate, bot-gated
-channel (uscode.house.gov) and the govinfo API requires a registered key.
-
-Channel: ``https://www.ecfr.gov/api/`` — key-free, robots-permitted
-(``Disallow: /search`` applies to the human UI only; the ``/api/`` tree is
-explicitly open), JSON for metadata and structured XML for full text.
-Search and per-node full text both work without registration (verified
-2026-10). The full-text endpoint requires response compression — the
-fetcher's client already negotiates gzip.
-
-Law identifiers are eCFR paths: ``title-N/part-P/section-S`` (any suffix
-may be dropped to widen the node: ``title-16/part-312`` is the COPPA Rule,
-``title-16`` is all of Title 16). ``fetch`` always reads the point-in-time
-snapshot for *today*; historical editions are addressable by date but out
-of scope for the v1 adapter.
+The eCFR JSON API (search at ``/search/v1/results``, full XML at
+``/versioner/v1/full``) is the machine channel: search resolves the
+deepest hierarchy node (title/part/section) and fetch pulls the dated
+full-XML for that title. Query-highlight ``<strong>``/``<span>`` markup
+in headings is stripped for display titles; the dated title XML already
+carries the section text, so no HTML scraping is needed.
+``modified`` pins the point-in-time date of the fetched XML, and
+``promulgation_date`` on summaries carries the search-side
+``starts_on`` when the API reports one.
 """
 
 from __future__ import annotations
 
 import datetime as dt
-import json
 import re
 import urllib.parse
 from typing import ClassVar
@@ -34,13 +24,17 @@ from typing_extensions import override
 from open_law.models import Law
 from open_law.models import LawSummary
 from open_law.sources.base import SourceAdapter
+from open_law.sources.base import as_dict
+from open_law.sources.base import as_str
+from open_law.sources.base import clamp_limit
+from open_law.sources.base import decode_json
+from open_law.sources.base import strip_markup
 
 __all__ = ["EcfrAdapter"]
 
 _BASE = "https://www.ecfr.gov/api"
 _HUMAN = "https://www.ecfr.gov"
 
-_TAG_RE = re.compile(r"<[^>]+>")
 _HEAD_RE = re.compile(r"<HEAD[^>]*>(.*?)</HEAD>", re.DOTALL)
 
 
@@ -49,48 +43,29 @@ def _today() -> str:
     return dt.datetime.now(dt.UTC).date().isoformat()
 
 
-def _as_dict(value: object) -> dict[str, object]:
-    return cast("dict[str, object]", value) if isinstance(value, dict) else {}
-
-
-def _as_str(value: object) -> str | None:
-    if value is None:
-        return None
-    text = str(value).strip()
-    return text or None
-
-
-def _strip_html(text: str | None) -> str | None:
-    """Drop ``<strong>``/``<span>`` query-highlight markup from headings."""
-    if text is None:
-        return None
-    clean = _TAG_RE.sub("", text).strip()
-    return clean or None
-
-
 def _node_path(hierarchy: dict[str, object]) -> str:
     """Canonical law_id from a search result's hierarchy (deepest wins)."""
-    title = _as_str(hierarchy.get("title"))
+    title = as_str(hierarchy.get("title"))
     if title is None:
         return ""
     path = f"title-{title}"
-    if section := _as_str(hierarchy.get("section")):
+    if section := as_str(hierarchy.get("section")):
         return f"{path}/section-{section}"
-    if part := _as_str(hierarchy.get("part")):
+    if part := as_str(hierarchy.get("part")):
         path += f"/part-{part}"
-    if subpart := _as_str(hierarchy.get("subpart")):
+    if subpart := as_str(hierarchy.get("subpart")):
         path += f"/subpart-{subpart}"
     return path
 
 
 def _node_title(entry: dict[str, object]) -> str | None:
     """Best display title: deepest heading, else the citation-style path."""
-    headings = _as_dict(entry.get("headings"))
+    headings = as_dict(entry.get("headings"))
     for level in ("section", "subpart", "part", "chapter", "title"):
-        if text := _strip_html(_as_str(headings.get(level))):
+        if text := strip_markup(as_str(headings.get(level))):
             return text
-    hierarchy_headings = _as_dict(entry.get("hierarchy_headings"))
-    if text := _strip_html(_as_str(hierarchy_headings.get("title"))):
+    hierarchy_headings = as_dict(entry.get("hierarchy_headings"))
+    if text := strip_markup(as_str(hierarchy_headings.get("title"))):
         return text
     return None
 
@@ -135,26 +110,22 @@ class EcfrAdapter(SourceAdapter):
     @override
     def search(self, query: str, *, limit: int = 10) -> list[LawSummary]:
         """Full-text search the CFR; ``limit`` is clamped to at least 1."""
-        size = max(1, limit)
+        size = clamp_limit(limit)
         url = f"{_BASE}/search/v1/results?query={urllib.parse.quote(query)}&per_page={size}"
         body = self._get(url)
-        try:
-            decoded = cast("object", json.loads(body))
-        except json.JSONDecodeError as exc:
-            msg = f"eCFR returned malformed JSON for query {query!r}"
-            raise ValueError(msg) from exc
-        payload = _as_dict(decoded)
+        decoded = decode_json(body, f"eCFR returned malformed JSON for query {query!r}")
+        payload = as_dict(decoded)
         summaries: list[LawSummary] = []
         raw_results = payload.get("results")
         results = [cast("dict[str, object]", r) for r in cast("list[object]", raw_results or []) if isinstance(r, dict)]
         for row in results:
-            hierarchy = _as_dict(row.get("hierarchy"))
+            hierarchy = as_dict(row.get("hierarchy"))
             law_id = _node_path(hierarchy)
             title = _node_title(row)
             if not law_id or title is None:
                 continue
-            node_type = _as_str(row.get("type")) or "?"
-            starts = _as_str(row.get("starts_on"))
+            node_type = as_str(row.get("type")) or "?"
+            starts = as_str(row.get("starts_on"))
             extras: list[tuple[str, str]] = [("node_type", node_type)]
             if change_types := row.get("change_types"):
                 extras.append(("change_types", ",".join(str(c) for c in cast("list[object]", change_types))))
@@ -188,7 +159,7 @@ class EcfrAdapter(SourceAdapter):
         # The XML root's <HEAD> is the node heading (e.g. "PART 312—CHILDREN'S
         # ONLINE PRIVACY PROTECTION RULE"); keep it as the title.
         head = _HEAD_RE.search(body)
-        title = _strip_html(head.group(1)) if head else None
+        title = strip_markup(head.group(1)) if head else None
         return Law(
             source=self.source_id,
             jurisdiction=self.jurisdiction,

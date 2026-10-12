@@ -20,6 +20,7 @@ from open_law.models import Law
 from open_law.models import LawSummary
 from open_law.sources.base import NotAvailableBySourceError
 from open_law.sources.base import SourceAdapter
+from open_law.sources.base import collapse_markup
 
 __all__ = ["NepalLawCommissionAdapter"]
 
@@ -30,9 +31,19 @@ _H1_RE = re.compile(r"<h1[^>]*>(.*?)</h1>", re.DOTALL | re.IGNORECASE)
 _SITE_SUFFIX = " | Nepal Law Commission"
 
 
-def _strip_tags(html: str) -> str:
-    """*html* with tags removed and whitespace collapsed."""
-    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html)).strip()
+def _page_title(body: str) -> str:
+    """The ``<title>`` text without the site suffix."""
+    title_match = _TITLE_RE.search(body)
+    title = title_match.group(1).strip() if title_match else ""
+    if title.endswith(_SITE_SUFFIX):
+        title = title[: -len(_SITE_SUFFIX)].strip()
+    return title
+
+
+def _content_number(law_id: str) -> str:
+    """The numeric content id in *law_id*, or '' when there is none."""
+    number_match = re.search(r"\d+", law_id)
+    return number_match.group(0) if number_match else ""
 
 
 class NepalLawCommissionAdapter(SourceAdapter):
@@ -48,22 +59,18 @@ class NepalLawCommissionAdapter(SourceAdapter):
     @override
     def fetch(self, law_id: str) -> Law:
         """Fetch one content page and extract its title."""
-        number_match = re.search(r"\d+", law_id)
-        number = number_match.group(0) if number_match else ""
+        number = _content_number(law_id)
         if not number:
             msg = f"{law_id!r} is not a Nepal Law Commission content id (expected e.g. '13535')"
             raise ValueError(msg)
         url = f"{_BASE}/content/{number}/"
         body = self._get(url)
-        title_match = _TITLE_RE.search(body)
-        title = title_match.group(1).strip() if title_match else ""
-        if title.endswith(_SITE_SUFFIX):
-            title = title[: -len(_SITE_SUFFIX)].strip()
+        title = _page_title(body)
         if title in ("", "404"):
             msg = f"no content with id {number!r} on lawcommission.gov.np"
             raise LookupError(msg)
         h1_match = _H1_RE.search(body)
-        h1 = _strip_tags(h1_match.group(1)) if h1_match else ""
+        h1 = collapse_markup(h1_match.group(1)) if h1_match else ""
         return Law(
             source=self.source_id,
             jurisdiction=self.jurisdiction,

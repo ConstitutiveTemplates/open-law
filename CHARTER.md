@@ -40,7 +40,7 @@ if you break one, the checks fail first.
 ## 2. Respect the law
 
 - **Copyright stays attached.** The project license is
-  **MIT** (see `LICENSE`). Dependency licenses are
+  **Apache-2.0** (see `LICENSE`). Dependency licenses are
   audited by `task license-check` (`pip-licenses --fail-on`): copyleft the
   project license cannot absorb fails the build.
 - **No CAPTCHA-solving.** This template never generates CAPTCHA-bypass

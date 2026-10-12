@@ -1,96 +1,86 @@
-"""e-Gov 法令 v2 adapter — Japan's official law portal API (法令API v2).
+"""e-Gov 法令 adapter — Japan's official law portal API.
 
-Digital Agency's v2 API at ``laws.e-gov.go.jp/api/2`` returns JSON and,
-unlike the retired v1, the law-list endpoint works without registration
-(verified 2026-09). The single-law full-text endpoint, however, is
-registration-gated, so :meth:`EgovAdapter.fetch` explains the
-registration step instead of pretending the data is reachable.
-
-Law identifiers are the source's ``law_id`` (e.g. ``105DF0000000337``),
-which also forms the human landing page URL.
+The Digital Agency's versioned API is the machine channel: v2 ``/laws``
+for title search (JSON with ``law_info`` + ``revision_info``), v1
+``/lawdata/<id>`` for the complete Law XML (title from ``LawBody /
+LawTitle``, promulgation date from the ``Law`` era attributes). Unknown
+ids answer ``Result/Code=1`` with an empty ``LawFullText`` — a
+``ValueError``. The five Japanese eras (Meiji→Reiwa) map to Gregorian
+years for ``promulgation_date``; kana title, category and law number
+ride along in ``extras``.
 """
 
 from __future__ import annotations
 
-import json
+import re
 import urllib.parse
+import xml.etree.ElementTree as ET
 from typing import ClassVar
-from typing import cast
 
 from typing_extensions import override
 
 from open_law.models import Law
 from open_law.models import LawSummary
-from open_law.sources.base import NotAvailableBySourceError
 from open_law.sources.base import SourceAdapter
+from open_law.sources.base import as_dict_list
+from open_law.sources.base import as_dict_or_none
+from open_law.sources.base import as_str
+from open_law.sources.base import clamp_limit
+from open_law.sources.base import decode_json
+from open_law.sources.base import pairs
+from open_law.sources.base import parse_xml
 
 __all__ = ["EgovAdapter"]
 
 _BASE = "https://laws.e-gov.go.jp/api/2"
+_V1 = "https://laws.e-gov.go.jp/api/1"
+_ID_RE = re.compile(r"^[0-9A-Z]{10,}$")
+
+_ERA_BASE: dict[str, int] = {"Meiji": 1868, "Taisho": 1912, "Showa": 1926, "Heisei": 1989, "Reiwa": 2019}
 
 
-def _as_dict(value: object) -> dict[str, object] | None:
-    """*value* as a dict when it is one, else None (defensive JSON)."""
-    if isinstance(value, dict):
-        return cast("dict[str, object]", value)
-    return None
-
-
-def _as_dict_list(value: object) -> list[dict[str, object]]:
-    """*value* as a list of dicts, dropping non-dict entries."""
-    if not isinstance(value, list):
-        return []
-    return [cast("dict[str, object]", entry) for entry in cast("list[object]", value) if isinstance(entry, dict)]
-
-
-def _as_str(value: object) -> str | None:
-    """Non-empty *value* stringified, else None (JSON nulls and gaps)."""
-    if value is None:
+def _promulgation_date(law: ET.Element) -> str | None:
+    """ISO date from the ``Law`` era attributes (Meiji 29-04-27 → 1896-04-27)."""
+    era = law.get("Era")
+    try:
+        year = int(str(law.get("Year")))
+        month = int(str(law.get("PromulgateMonth")))
+        day = int(str(law.get("PromulgateDay")))
+    except (TypeError, ValueError):
         return None
-    text = str(value).strip()
-    return text or None
-
-
-def _pairs(candidates: tuple[tuple[str, object], ...]) -> tuple[tuple[str, str], ...]:
-    """(key, value) pairs for the non-None *candidates*, stringified."""
-    pairs: list[tuple[str, str]] = []
-    for key, value in candidates:
-        text = _as_str(value)
-        if text is not None:
-            pairs.append((key, text))
-    return tuple(pairs)
+    if era is None or era not in _ERA_BASE:
+        return None
+    return f"{_ERA_BASE[era] + year - 1:04d}-{month:02d}-{day:02d}"
 
 
 class EgovAdapter(SourceAdapter):
-    """Search Japan's e-Gov 法令 v2 law list (no registration needed)."""
+    """Search Japan's e-Gov law list; fetch full text via the v1 lawdata endpoint."""
 
     source_id: ClassVar[str] = "jp"
     name: ClassVar[str] = "e-Gov 法令検索 (Digital Agency)"
     jurisdiction: ClassVar[str] = "JP"
     homepage: ClassVar[str] = "https://laws.e-gov.go.jp"
     license_note: ClassVar[str] = "政府標準利用規約 (GoJ Standard Terms of Use)"
+    crawl_delay_seconds: ClassVar[float] = 1.0
+    text_format: ClassVar[str] = "xml"
 
     @override
     def search(self, query: str, *, limit: int = 10) -> list[LawSummary]:
         """Title-search the law list; ``limit`` is clamped to at least 1."""
-        size = max(1, limit)
+        size = clamp_limit(limit)
         url = f"{_BASE}/laws?law_title={urllib.parse.quote(query)}&limit={size}"
         body = self._get(url)
-        try:
-            decoded = cast("object", json.loads(body))
-        except json.JSONDecodeError as exc:
-            msg = f"e-Gov returned malformed JSON for query {query!r}"
-            raise ValueError(msg) from exc
-        payload = _as_dict(decoded)
+        decoded = decode_json(body, f"e-Gov returned malformed JSON for query {query!r}")
+        payload = as_dict_or_none(decoded)
         if payload is None:
             msg = f"e-Gov returned a non-object JSON body for query {query!r}"
             raise ValueError(msg)
         summaries: list[LawSummary] = []
-        for entry in _as_dict_list(payload.get("laws")):
-            info = _as_dict(entry.get("law_info")) or {}
-            revision = _as_dict(entry.get("revision_info")) or {}
-            law_id = _as_str(info.get("law_id"))
-            title = _as_str(revision.get("law_title")) or _as_str(info.get("law_num"))
+        for entry in as_dict_list(payload.get("laws")):
+            info = as_dict_or_none(entry.get("law_info")) or {}
+            revision = as_dict_or_none(entry.get("revision_info")) or {}
+            law_id = as_str(info.get("law_id"))
+            title = as_str(revision.get("law_title")) or as_str(info.get("law_num"))
             if law_id is None or title is None:
                 continue
             summaries.append(
@@ -99,9 +89,9 @@ class EgovAdapter(SourceAdapter):
                     jurisdiction=self.jurisdiction,
                     law_id=law_id,
                     title=title,
-                    promulgation_date=_as_str(info.get("promulgation_date")),
+                    promulgation_date=as_str(info.get("promulgation_date")),
                     url=f"https://laws.e-gov.go.jp/document?law_id={urllib.parse.quote(law_id)}",
-                    extras=_pairs(
+                    extras=pairs(
                         (
                             ("law_num", info.get("law_num")),
                             ("law_title_kana", revision.get("law_title_kana")),
@@ -114,17 +104,40 @@ class EgovAdapter(SourceAdapter):
 
     @override
     def fetch(self, law_id: str) -> Law:
-        """Not offered without registration: the full-text API needs a key.
+        """Fetch one law's full-text XML as a :class:`Law` (no key needed).
 
-        The v2 law-list endpoint used by :meth:`search` is open, but
-        per-law full text (``/api/2/laws/...`` document endpoints)
-        requires the operator to register an application at the e-Gov
-        法令API site first.
+        *law_id* is the e-Gov id (``325AC0000000041``). The v1 ``lawdata``
+        endpoint returns the complete Law XML: title from ``LawBody /
+        LawTitle``, promulgation date from the ``Law`` attributes, and the
+        ``lawdata`` URL itself as ``text_url`` so :meth:`full_text`
+        extracts the articles as plain text. Unknown ids answer
+        ``Result/Code=1`` with an empty ``LawFullText`` — a ``ValueError``.
         """
-        msg = (
-            f"e-Gov full text for {law_id!r} requires 法令API 利用者登録 "
-            "(application key); register at https://elsur.e-gov.go.jp/ "
-            "then extend this adapter — the landing page is "
-            f"https://laws.e-gov.go.jp/document?law_id={urllib.parse.quote(law_id)}"
+        lid = law_id.strip()
+        if not _ID_RE.match(lid):
+            msg = f"Unrecognised e-Gov law id {law_id!r} (expected e.g. '325AC0000000041')"
+            raise ValueError(msg)
+        url = f"{_V1}/lawdata/{urllib.parse.quote(lid)}"
+        body = self._get(url)
+        root = parse_xml(body, f"e-Gov returned malformed XML for law {lid!r}")
+        code = root.findtext("Result/Code")
+        law = root.find("ApplData/LawFullText/Law")
+        if code != "0" or law is None:
+            msg = f"e-Gov has no law {lid!r} (Result/Code={code})"
+            raise ValueError(msg)
+        title = law.findtext("LawBody/LawTitle")
+        num = law.findtext("LawBody/LawNum") or law.findtext("LawNum")
+        prom = _promulgation_date(law)
+        extras = pairs((("law_num", num), ("era", law.get("Era")), ("law_type", law.get("LawType"))))
+        return Law(
+            source=self.source_id,
+            jurisdiction=self.jurisdiction,
+            law_id=lid,
+            title=(title or "").strip() or lid,
+            promulgation_date=prom,
+            url=f"https://laws.e-gov.go.jp/document?law_id={urllib.parse.quote(lid)}",
+            language="jpn",
+            modified=prom,
+            text_url=url,
+            extras=(("format", "egov-law-xml"), *extras),
         )
-        raise NotAvailableBySourceError(msg)

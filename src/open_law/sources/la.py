@@ -26,6 +26,7 @@ from open_law.models import Law
 from open_law.models import LawSummary
 from open_law.sources.base import NotAvailableBySourceError
 from open_law.sources.base import SourceAdapter
+from open_law.sources.base import collapse_markup
 
 __all__ = ["LaoGazetteAdapter"]
 
@@ -46,9 +47,16 @@ _LABEL_MAP: dict[str, tuple[str | None, str]] = {
 }
 
 
-def _strip_tags(html: str) -> str:
-    """*html* with tags removed and whitespace collapsed."""
-    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html)).strip()
+def _label_row_fields(body: str) -> dict[str, str]:
+    """Label → value mapping of the gazette's ``row`` metadata blocks."""
+    fields: dict[str, str] = {}
+    for row_match in _ROW_RE.finditer(body):
+        label_match = _LABEL_RE.search(row_match.group(0))
+        label = collapse_markup(label_match.group(1)).rstrip(": ").strip() if label_match else ""
+        value = collapse_markup(row_match.group(1))
+        if label and value:
+            fields[label] = value
+    return fields
 
 
 class LaoGazetteAdapter(SourceAdapter):
@@ -72,13 +80,7 @@ class LaoGazetteAdapter(SourceAdapter):
             raise ValueError(msg)
         url = f"{_BASE}/index.php?r=site/display&id={number}"
         body = self._get(url)
-        fields: dict[str, str] = {}
-        for row_match in _ROW_RE.finditer(body):
-            label_match = _LABEL_RE.search(row_match.group(0))
-            label = _strip_tags(label_match.group(1)).rstrip(": ").strip() if label_match else ""
-            value = _strip_tags(row_match.group(1))
-            if label and value:
-                fields[label] = value
+        fields = _label_row_fields(body)
         title = fields.get("ຫົວຂໍ້", "")
         if not title:
             msg = f"gazette id {number!r} is not a legal document page"

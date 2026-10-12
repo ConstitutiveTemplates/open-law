@@ -18,13 +18,14 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from typing import ClassVar
 
-from defusedxml.ElementTree import fromstring
 from typing_extensions import override
 
 from open_law.models import Law
 from open_law.models import LawSummary
 from open_law.sources.base import NotAvailableBySourceError
 from open_law.sources.base import SourceAdapter
+from open_law.sources.base import parse_xml
+from open_law.sources.base import xml_text
 
 __all__ = ["EurlexAdapter"]
 
@@ -52,6 +53,32 @@ class _RdfFacts:
     created: str | None = None
     modified: str | None = None
     resource_type: str | None = None
+
+
+def _first_text(description: ET.Element, qnames: tuple[str, ...]) -> str | None:
+    """First non-empty text among fully-qualified *qnames* in *description*."""
+    for qname in qnames:
+        if (text := xml_text(description.find(qname))) is not None:
+            return text
+    return None
+
+
+def _first_resource(description: ET.Element, props: tuple[str, ...]) -> str | None:
+    """rdf:resource tail of the first *props* child that carries one."""
+    for prop in props:
+        element = description.find(f"{_CDM}{prop}")
+        if element is not None:
+            resource = element.attrib.get(f"{_RDF}resource")
+            if resource:
+                return _tail(resource)
+    return None
+
+
+def _rdf_type(description: ET.Element) -> str | None:
+    """rdf:type resource tail of *description* (work/expression/...)."""
+    element = description.find(f"{_RDF}type")
+    resource = element.attrib.get(f"{_RDF}resource") if element is not None else None
+    return _tail(resource) if resource else None
 
 
 def _scan_descriptions(root: ET.Element) -> _RdfFacts:
@@ -91,11 +118,7 @@ class EurlexAdapter(SourceAdapter):
         celex = law_id.strip()
         url = f"{_BASE}/{urllib.parse.quote(celex)}"
         body = self._get(url)
-        try:
-            root = fromstring(body)
-        except ET.ParseError as exc:
-            msg = f"CELLAR returned malformed RDF for {celex!r}"
-            raise ValueError(msg) from exc
+        root = parse_xml(body, f"CELLAR returned malformed RDF for {celex!r}")
         facts = _scan_descriptions(root)
         title = facts.title or facts.title_short or celex
         extras = [("celex", celex)]
@@ -130,30 +153,3 @@ class EurlexAdapter(SourceAdapter):
             "publications.europa.eu/webapi/rdf/sparql"
         )
         raise NotAvailableBySourceError(msg)
-
-
-def _first_text(description: ET.Element, qnames: tuple[str, ...]) -> str | None:
-    """First non-empty text among fully-qualified *qnames* in *description*."""
-    for qname in qnames:
-        element = description.find(qname)
-        if element is not None and element.text and element.text.strip():
-            return element.text.strip()
-    return None
-
-
-def _first_resource(description: ET.Element, props: tuple[str, ...]) -> str | None:
-    """rdf:resource tail of the first *props* child that carries one."""
-    for prop in props:
-        element = description.find(f"{_CDM}{prop}")
-        if element is not None:
-            resource = element.attrib.get(f"{_RDF}resource")
-            if resource:
-                return _tail(resource)
-    return None
-
-
-def _rdf_type(description: ET.Element) -> str | None:
-    """rdf:type resource tail of *description* (work/expression/...)."""
-    element = description.find(f"{_RDF}type")
-    resource = element.attrib.get(f"{_RDF}resource") if element is not None else None
-    return _tail(resource) if resource else None

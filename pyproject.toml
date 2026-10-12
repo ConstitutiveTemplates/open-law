@@ -6,7 +6,7 @@ requires = [ "setuptools>=77", "setuptools-scm[toml]>=8" ]
 name = "open-law"
 description = "Scrape and consolidate legislation from around the world"
 readme = "README.md"
-license = "MIT"
+license = "Apache-2.0"
 license-files = [ "LICENSE" ]
 authors = [
   # Further authors may be added by duplicating this section
@@ -28,9 +28,12 @@ dependencies = [
     "httpx>=0.27,<1",
     "defusedxml>=0.7.1",
     "typing-extensions>=4.16.0",
-]  # Add project dependencies here, e.g. ["click", "numpy"]
+]
 urls.GitHub = "https://github.com/kasi-x/open-law"
 scripts.open-law = "open_law.__main__:main"
+
+[project.optional-dependencies]
+pdf = ["pypdf>=5.0"]
 
 
 [dependency-groups]
@@ -117,7 +120,7 @@ filterwarnings = "error"
 pythonpath = ["."]
 # Doctest python code in docs, python code in src docstrings, test functions in tests
 testpaths = "src/open_law tests"
-
+markers = ["live: opt-in live network probe of registered adapters (skipped unless OPEN_LAW_LIVE=1)"]
 
 
 [tool.coverage.run]
@@ -414,9 +417,24 @@ suppress-none-returning = false
 "src/open_law/fetcher.py" = [
     "S310",   # urlopen  CONTEXT: fetcher.py owns the single audited urlopen call-site
     "TID251", # banned-api  CONTEXT: fetcher.py is the allowlisted implementation behind the ban
+    "SLOT000", # str-subclass without slots  CONTEXT: FetchTextResult is a thin provenance str
+    "PLR0911", # too-many-returns  CONTEXT: _query_wayback's archived/closest branches are each one return
+    "S110",    # try-except-pass  CONTEXT: wayback budget increment best-effort — miscount is not a failure
+    "BLE001",  # blind-except  CONTEXT: request-count update for the snapshot host — any parse failure is benign
+    "C901",    # complex-structure  CONTEXT: fetch_result's 5xx/wayback branches are each a distinct decision
+    "PLR0915", # too-many-statements  CONTEXT: fetch_result's politeness gate + wayback fallback is one method by design
+    "PLR0912", # too-many-branches  CONTEXT: status-code and wayback branches each guard a charter constraint
+    "TRY300",  # try-consider-else  CONTEXT: the success assignment sits in try — else would split the provenance update
+    "TRY301",  # raise-within-try  CONTEXT: AccessDenied for 401/403 is raised inside the GET try to keep budget counting together
 ]
 # logging_setup.py の長い呼び出し（structlog の ConsoleRenderer /
 # make_filtering_bound_logger、loguru の add() など）は line-length 設定により
 # ruff format が折り返しを変えるため、E501 は免除する。
 # 日本語 docstring の終端句読点（D415）とシングルトン設定の global（PLW0603）も免除。
 "src/open_law/logging_setup.py" = ["E501", "D", "PLW0603", "I001"]
+"src/open_law/__main__.py" = ["C901"]  # complex-structure  CONTEXT: main's 5 subcommand branches are one dispatch by design
+"src/open_law/text_extract.py" = ["D301"]  # escape-sequence-in-docstring  CONTEXT: docstring shows \n\n as literal markers
+"src/open_law/sources/base.py" = [
+    "PLC0415", # import-outside-top-level  CONTEXT: pypdf is an optional extra, imported only when text_format=pdf
+    "RET504",  # unnecessary-assign  CONTEXT: text holds the stripped pypdf join before the scanned-PDF comment
+]

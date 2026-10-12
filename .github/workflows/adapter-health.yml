@@ -1,0 +1,178 @@
+name: adapter-health
+
+# Weekly live-probe of every jurisdiction adapter: one cheap representative
+# fetch/search per adapter against its official channel. The test suite is
+# fully offline, so upstream API breakage would otherwise go unnoticed until
+# a user hits it. On a finding it opens or updates ONE issue per run
+# (reuses any open 'adapter-health' issue). When every probe passes it
+# closes any open 'adapter-health' issue with an "adapter health resolved"
+# comment.
+
+on:
+  schedule:
+    - cron: "0 8 * * 1" # Mondays 08:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Key-gated adapters read credentials from the environment; when the
+      # secret is unset the kr probe is skipped (and recorded as skipped in
+      # the report so the gap stays visible instead of silent).
+      LAW_KR_OC: ${{ secrets.LAW_KR_OC }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Adapter registry sanity check
+        run: |
+          set -euo pipefail
+          uv run --locked open-law sources | tee sources.txt
+
+      - name: Probe uk adapter (fetch ukcm/2023/1)
+        run: |
+          if uv run --locked open-law fetch uk ukcm/2023/1 >> health.txt 2>&1; then
+            echo "uk: OK" >> health.txt
+          else
+            echo "uk: FAILED" >> health.txt
+            echo "FOUND=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Probe jp adapter (search key-free law list)
+        run: |
+          if uv run --locked open-law search jp "銀行法" --limit 1 >> health.txt 2>&1; then
+            echo "jp: OK" >> health.txt
+          else
+            echo "jp: FAILED" >> health.txt
+            echo "FOUND=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Probe kr adapter (key-gated search)
+        if: ${{ env.LAW_KR_OC != '' }}
+        run: |
+          if uv run --locked open-law search kr "은행법" --limit 1 >> health.txt 2>&1; then
+            echo "kr: OK" >> health.txt
+          else
+            echo "kr: FAILED" >> health.txt
+            echo "FOUND=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Record kr skip (no LAW_KR_OC secret)
+        if: ${{ env.LAW_KR_OC == '' }}
+        run: |
+          echo "kr: SKIPPED (LAW_KR_OC secret not set)" >> health.txt
+
+      - name: Probe la adapter (fetch 2143)
+        run: |
+          if uv run --locked open-law fetch la 2143 >> health.txt 2>&1; then
+            echo "la: OK" >> health.txt
+          else
+            echo "la: FAILED" >> health.txt
+            echo "FOUND=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Probe np adapter (fetch 13535)
+        run: |
+          if uv run --locked open-law fetch np 13535 >> health.txt 2>&1; then
+            echo "np: OK" >> health.txt
+          else
+            echo "np: FAILED" >> health.txt
+            echo "FOUND=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Probe bd adapter (fetch 43)
+        run: |
+          if uv run --locked open-law fetch bd 43 >> health.txt 2>&1; then
+            echo "bd: OK" >> health.txt
+          else
+            echo "bd: FAILED" >> health.txt
+            echo "FOUND=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Probe eu adapter (fetch 32022R2065)
+        run: |
+          if uv run --locked open-law fetch eu 32022R2065 >> health.txt 2>&1; then
+            echo "eu: OK" >> health.txt
+          else
+            echo "eu: FAILED" >> health.txt
+            echo "FOUND=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Probe us adapter (search key-free eCFR API)
+        run: |
+          if uv run --locked open-law search us "copyright" --limit 1 >> health.txt 2>&1; then
+            echo "us: OK" >> health.txt
+          else
+            echo "us: FAILED" >> health.txt
+            echo "FOUND=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Probe ca adapter (fetch P-8.6)
+        run: |
+          if uv run --locked open-law fetch ca P-8.6 >> health.txt 2>&1; then
+            echo "ca: OK" >> health.txt
+          else
+            echo "ca: FAILED" >> health.txt
+            echo "FOUND=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Probe jlt adapter (fetch 4913)
+        run: |
+          if uv run --locked open-law fetch jlt 4913 >> health.txt 2>&1; then
+            echo "jlt: OK" >> health.txt
+          else
+            echo "jlt: FAILED" >> health.txt
+            echo "FOUND=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Show probe report
+        if: always()
+        run: cat health.txt
+
+      - name: Ensure adapter-health label exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh label create adapter-health --description "Weekly adapter-health probe failures" --color d73a4a 2>/dev/null || true
+
+      - name: Open or update adapter-health issue
+        if: env.FOUND == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          label="adapter-health"
+          body=$(cat health.txt)
+          issue=$(gh issue list --state open --label "$label" --json number --jq '.[0].number // empty' | head -1)
+          if [ -n "$issue" ]; then
+            gh issue edit "$issue" --title "Adapter health report $(date -u +%Y-%m-%d)" --body "$body"
+          else
+            gh issue create --title "Adapter health report $(date -u +%Y-%m-%d)" --label "$label" --body "$body"
+          fi
+
+      - name: Close adapter-health issue on clean report
+        if: env.FOUND != '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          label="adapter-health"
+          issue=$(gh issue list --state open --label "$label" --json number --jq '.[0].number // empty' | head -1)
+          if [ -n "$issue" ]; then
+            gh issue close "$issue" --comment "adapter health resolved"
+          else
+            echo "no open $label issue; nothing to close"
+          fi

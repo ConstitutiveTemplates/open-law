@@ -29,11 +29,13 @@ $ uv run open-law fetch eu 32022R2065
 `law_id`), title and dates, the machine-readable `text_url`, an
 `akn_url` when the source offers Akoma Ntoso, and source-specific
 `extras`. `search` prints the same shape minus full-text locations.
-`fetch jp <law_id>` deliberately fails with the registration URL —
-e-Gov's full-text endpoint requires a (free) application key; the
-metadata list does not. The same pattern applies to Korea: `search kr`
-activates once the ``LAW_KR_OC`` open-API id (issued at
-openapi.law.go.kr) is set in the environment. The `jp` law_ids that the
+`fetch jp <law_id>` returns the v1 `lawdata` full-text XML parsed into
+the unified shape — no registration needed (the elsur application key
+is only required for the newer v2 document endpoints, which open-law
+does not use). Korea still needs its key: `search kr` activates once
+the ``LAW_KR_OC`` open-API id (issued at openapi.law.go.kr, bound to
+your server IP — without it the API answers "required-input
+verification failed") is set in the environment. The `jp` law_ids that the
 e-Gov list returns are exactly what the orimono ecosystem's JLT legal
 corpus (`datasets/legal/`, five statutes incl. the 2,730-pair Civil Code
 split) scores against — the official MoJ English translations there are
@@ -79,6 +81,34 @@ CSRF-gated to machines, so `search` declines; the per-law ids come from
 the human index. This is the *English* side of the same statute book
 `jp` (e-Gov) indexes in Japanese — the bridge orimono's legal corpus
 evaluates against.
+
+```console
+# Germany's federal statutes (Gesetze im Internet — no key, static index + HTML)
+$ uv run open-law search de BGB --limit 3
+$ uv run open-law fetch de bgb        # Bürgerliches Gesetzbuch — text_url is the full-HTML Gesamtausgabe
+```
+
+The `de` source wraps the BMJ/BfJ portal: `search` matches the query
+against the alphabetical `Teilliste_<LETTER>.html` index (abbreviation
+and title), `fetch` takes the portal folder (`bgb`, `stgb`) and points
+`text_url` at the full-HTML edition for `text` to strip. Per-law
+`xml.zip` packages exist on the same pages for bulk consumers.
+
+```console
+# Texas statutes (TCAS JSON search + static chapter HTML — no key)
+$ uv run open-law search us-tx biometric --limit 5
+$ uv run open-law fetch us-tx BC.503   # Business & Commerce Code ch. 503 (CUBI — biometric identifiers)
+```
+
+The `us-tx` source wraps the Texas Legislature's TCAS backend: `search`
+is full-text across all codes via the key-free `TCASSearch` JSON API
+(results map to `<CODE>.<chapter>` ids), `fetch` serves the chapter's
+static HTML from the state file server. A trailing section
+(`BC.503.001`) narrows to the same chapter file — sections share one
+document. California (`leginfo.legislature.ca.gov`) is Cloudflare-gated
+(403 to machines) and Illinois (`ilga.gov`) is unreachable from
+datacenter networks — both are documented in
+`docs/explanations/jurisdiction-coverage.md`, not shipped as adapters.
 
 ## Read the full text
 
@@ -126,8 +156,6 @@ $ uv run open-law preflight https://example.com/feed
 
 prints the fetcher's judgement as JSON: feed/API discovery, robots.txt
 verdict, and per-host budget state — the tool the charter runs before
-any page fetch.
-
 ## Politeness is per source
 
 Each adapter class declares its own `crawl_delay_seconds` (mirroring
@@ -135,6 +163,38 @@ the source's robots.txt `Crawl-delay`, such as legislation.gov.uk's 5)
 and `http_headers` (CELLAR's content negotiation). The CLI builds the
 default fetcher from those declarations, so every request is polite by
 construction; responses are cached under `.cache/fetcher/` for a day.
+
+## Fetch budgets
+
+Recommended `FetchConfig` per adapter (delay × budget × timeout × cache):
+
+| source | `crawl_delay_seconds` | `max_requests_per_host` | `timeout_seconds` | `cache_ttl_seconds` | notes |
+|--------|----------------------:|------------------------:|-----------------:|--------------------:|-------|
+| `np`   | 10.0                | 100                   | 10             | 86400 (1 day)     | `Crawl-delay: 10` on lawcommission.gov.np |
+| `la`   | 2.0                 | 100                   | 10             | 86400             | no robots.txt — conservative 2 s |
+| `uk`   | 5.0                 | 100                   | 10             | 86400             | `Crawl-delay: 5` on legislation.gov.uk |
+| `bd`   | 2.0                 | 100                   | 10             | 86400             | UTF-16 pages, no robots.txt |
+| `ca`   | 2.0                 | 100                   | 10             | 86400             | ~5.8 MB for `C-46`, still budget-safe |
+| `de`   | 2.0                 | 100                   | 10             | 86400             | ~486 KB indexes, ~3 MB for `bgb` |
+| `us-tx`| 2.0                 | 100                   | 10             | 86400             | |
+| others | 1.0                 | 100                   | 10             | 86400             | `eu`, `jp`, `kr`, `us`, `jlt` — defaults |
+
+Build a tuned fetcher with `FetchConfig(delay_seconds=Adapter.crawl_delay_seconds)` via
+`open_law.sources.default_fetcher`, or construct `PoliteFetcher(FetchConfig(...))` directly.
+See `docs/how-to/fetch-budgets.md` for the full matrix, retry guidance with `--wayback`,
+and bulk-dump timing.
+
+## Live probes
+
+Live network probes are opt-in. Run one cheap fetch per registered adapter with:
+
+```console
+$ OPEN_LAW_LIVE=1 uv run pytest -m live -q
+```
+
+Without `OPEN_LAW_LIVE=1` the `live` tests are skipped (they are also excluded by default
+via `-m "not live"`). `kr` additionally requires `LAW_KR_OC` (the open-API id at
+openapi.law.go.kr, bound to the caller's IP).
 
 ## Add a new jurisdiction
 

@@ -15,6 +15,7 @@ from open_law.sources.base import NotAvailableBySourceError
 from open_law.sources.base import SourceAdapter
 from open_law.sources.bd import BangladeshLawsAdapter
 from open_law.sources.ca import JusticeLawsAdapter
+from open_law.sources.de import GesetzeImInternetAdapter
 from open_law.sources.eu import EurlexAdapter
 from open_law.sources.jlt import JltAdapter
 from open_law.sources.jp import EgovAdapter
@@ -23,6 +24,7 @@ from open_law.sources.la import LaoGazetteAdapter
 from open_law.sources.np import NepalLawCommissionAdapter
 from open_law.sources.uk import LegislationGovUkAdapter
 from open_law.sources.us import EcfrAdapter
+from open_law.sources.us_tx import TexasStatutesAdapter
 
 __all__ = [
     "ADAPTERS",
@@ -43,6 +45,8 @@ ADAPTERS: dict[str, type[SourceAdapter]] = {
     EcfrAdapter.source_id: EcfrAdapter,
     JusticeLawsAdapter.source_id: JusticeLawsAdapter,
     JltAdapter.source_id: JltAdapter,
+    GesetzeImInternetAdapter.source_id: GesetzeImInternetAdapter,
+    TexasStatutesAdapter.source_id: TexasStatutesAdapter,
 }
 
 

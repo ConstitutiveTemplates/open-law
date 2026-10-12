@@ -36,24 +36,52 @@ permission instead of bypassing the protection.
 
 Requires the ``httpx`` runtime dependency (added automatically with this
 engine). Tests use ``respx``-style monkeypatched transports — no network.
+
+This module is the orchestration layer: vocabulary lives in
+:mod:`open_law.fetch_models`, the disk cache in
+:mod:`open_law.fetch_cache`, robots.txt in :mod:`open_law.fetch_robots`,
+feed/API discovery in :mod:`open_law.fetch_discovery`, and the archive
+fallback in :mod:`open_law.fetch_wayback`. Every name those modules
+expose is re-exported here so ``from open_law.fetcher import FetchConfig``
+keeps working.
 """
 
 from __future__ import annotations
 
-import hashlib
-import json
-import os
 import time
 import urllib.parse
 import urllib.robotparser
-from dataclasses import dataclass
-from pathlib import Path
 from typing import Self
-from typing import cast
 
 import httpx
 
+from open_law.fetch_cache import read_cached_body
+from open_law.fetch_cache import write_cached_body
+from open_law.fetch_discovery import API_PATHS
+from open_law.fetch_discovery import FEED_PATHS
+from open_law.fetch_discovery import OriginDiscovery
+from open_law.fetch_discovery import is_feed_response as _is_feed_response
+from open_law.fetch_models import CONTACT_PLACEHOLDER
+from open_law.fetch_models import AccessDeniedError
+from open_law.fetch_models import BudgetExceededError
+from open_law.fetch_models import FetchConfig
+from open_law.fetch_models import FetchResult
+from open_law.fetch_models import FetchTextResult
+from open_law.fetch_models import Preflight
+from open_law.fetch_models import RobotDeniedError
+from open_law.fetch_models import access_denied_error as _access_denied
+from open_law.fetch_models import http_parts as _http_parts
+from open_law.fetch_robots import load_robots_parser
+from open_law.fetch_wayback import closest_snapshot as _closest_snapshot
+from open_law.fetch_wayback import wayback_for_error_status
+from open_law.fetch_wayback import wayback_on_transport_error
+
 __all__ = [
+    "API_PATHS",
+    "CONTACT_PLACEHOLDER",
+    "FEED_PATHS",
+    "_API_PATHS",
+    "_FEED_PATHS",
     "AccessDeniedError",
     "BudgetExceededError",
     "FetchConfig",
@@ -62,11 +90,11 @@ __all__ = [
     "PoliteFetcher",
     "Preflight",
     "RobotDeniedError",
+    "_closest_snapshot",
+    "_is_feed_response",
     "fetch_text",
     "preflight",
 ]
-
-CONTACT_PLACEHOLDER = "contact@example.com"
 
 _ROBOTS_CACHE: dict[str, urllib.robotparser.RobotFileParser] = {}
 _LAST_FETCH_AT: dict[str, float] = {}
@@ -80,238 +108,10 @@ _DISCOVERY_CACHE: dict[str, tuple[str | None, str | None, float]] = {}
 
 # Feed endpoints probed (in order) before falling back to HTML scraping.
 # A 200 with an XML content-type counts as "feed exists".
-_FEED_PATHS: tuple[str, ...] = (
-    "/feed",
-    "/feed.xml",
-    "/rss.xml",
-    "/rss",
-    "/atom.xml",
-    "/atom",
-    "/index.xml",
-    "/feed.atom",
-)
+_FEED_PATHS: tuple[str, ...] = FEED_PATHS
 
 # Machine-API hints probed before falling back to HTML scraping.
-_API_PATHS: tuple[str, ...] = ("/api", "/api.json", "/openapi.json")
-
-
-class RobotDeniedError(ValueError):
-    """Raised when the site's robots.txt disallows the requested path."""
-
-
-class AccessDeniedError(ValueError):
-    """Raised when the site denies access (401/403 on preflight).
-
-    Do not retry around the block, rotate user-agents, or reach for a
-    CAPTCHA solver — the site said no. Use its API or ask permission.
-    """
-
-
-class BudgetExceededError(ValueError):
-    """Raised when the per-host session budget is exhausted.
-
-    What is polite at 10 requests is a DDoS at 10 000. Stop, file an issue
-    describing the crawl size, and get review before raising
-    ``max_requests_per_host``.
-    """
-
-
-@dataclass(frozen=True)
-class Preflight:
-    """The fetcher's judgement about *url*, before any page is fetched.
-
-    - ``feed_url``: a working feed endpoint found on the same host, or
-      ``None``. When set, fetch the feed — not the HTML page.
-    - ``api_hint``: a discovered machine-API hint (``/api``, ``api.``
-      subdomain, ``openapi.json``), or ``None``. When set, prefer the API
-      over scraping.
-    - ``allowed``: robots.txt permits the path.
-    - ``request_count`` / ``request_budget``: session usage on this host.
-    """
-
-    url: str
-    feed_url: str | None
-    api_hint: str | None
-    allowed: bool
-    request_count: int
-    request_budget: int
-
-    @property
-    def should_use_feed(self) -> bool:
-        """True when a feed exists: fetch it instead of the HTML page."""
-        return self.feed_url is not None
-
-    @property
-    def should_use_api(self) -> bool:
-        """True when a machine API was found: prefer it over scraping."""
-        return self.feed_url is None and self.api_hint is not None
-
-    @property
-    def excessive(self) -> bool:
-        """True when the host budget is exhausted: stop, do not scale up."""
-        return self.request_count >= self.request_budget
-
-
-@dataclass(frozen=True)
-class FetchConfig:
-    """Tuning knobs for :class:`PoliteFetcher`."""
-
-    project_name: str = "open-law"
-    contact: str = os.environ.get("FETCHER_CONTACT", CONTACT_PLACEHOLDER)
-    delay_seconds: float = 1.0
-    timeout_seconds: float = 10.0
-    cache_ttl_seconds: float = 24 * 3600
-    cache_dir: Path = Path(".cache/fetcher")
-    user_agent: str = ""
-    max_requests_per_host: int = 100
-    wayback_fallback: bool = False
-
-    def resolved_user_agent(self) -> str:
-        """Contactable User-Agent identifying this project."""
-        if self.user_agent:
-            return self.user_agent
-        return f"{self.project_name}/0.1 (+mailto:{self.contact})"
-
-
-@dataclass(frozen=True)
-class FetchResult:
-    """Result of a polite fetch, with Wayback provenance when used."""
-
-    text: str
-    url: str
-    from_wayback: bool = False
-    wayback_url: str | None = None
-    wayback_timestamp: str | None = None
-
-
-class FetchTextResult(str):
-    """A ``str`` that also carries Wayback provenance.
-
-    ``PoliteFetcher.fetch_text`` returns this so callers that treat the
-    result as a plain string keep working while CLI and tests can inspect
-    ``from_wayback`` / ``wayback_url`` / ``wayback_timestamp``.
-    """
-
-    from_wayback: bool
-    wayback_url: str | None
-    wayback_timestamp: str | None
-
-    def __new__(  # type: ignore[misc]
-        cls,
-        text: str,
-        *,
-        from_wayback: bool = False,
-        wayback_url: str | None = None,
-        wayback_timestamp: str | None = None,
-    ) -> Self:
-        obj = super().__new__(cls, text)
-        obj.from_wayback = from_wayback
-        obj.wayback_url = wayback_url
-        obj.wayback_timestamp = wayback_timestamp
-        return obj
-
-
-def _http_parts(url: str) -> urllib.parse.SplitResult:
-    """Split *url*, refusing non-http(s) URLs with the shared message."""
-    parts = urllib.parse.urlsplit(url)
-    if parts.scheme not in ("http", "https"):
-        msg = f"refusing to fetch non-http(s) URL: {url!r}"
-        raise ValueError(msg)
-    return parts
-
-
-def _access_denied(target: str, status: int) -> AccessDeniedError:
-    """The access-denied error for *target* (origin or URL) and *status*."""
-    msg = f"access denied by {target!r} (HTTP {status}): use its API or ask permission"
-    return AccessDeniedError(msg)
-
-
-def _is_feed_response(response: httpx.Response) -> bool:
-    """True when *response* looks like a feed (XML type or rss/feed body)."""
-    content_type = cast("str", response.headers.get("content-type", ""))
-    body = response.text[:500].lower()
-    return "xml" in content_type or "<rss" in body or "<feed" in body
-
-
-def _closest_snapshot(data: object) -> tuple[str | None, str | None]:
-    """(snapshot_url, timestamp) in a Wayback availability payload, else Nones."""
-    if not isinstance(data, dict):
-        return None, None
-    payload = cast("dict[str, object]", data)
-    archived = payload.get("archived_snapshots")
-    if not isinstance(archived, dict):
-        return None, None
-    closest = cast("dict[str, object]", archived).get("closest")
-    if not isinstance(closest, dict):
-        return None, None
-    closest_d = cast("dict[str, object]", closest)
-    if not closest_d.get("available"):
-        return None, None
-    snap_url = closest_d.get("url")
-    timestamp = closest_d.get("timestamp")
-    if not isinstance(snap_url, str) or not snap_url:
-        return None, None
-    ts = timestamp if isinstance(timestamp, str) else None
-    return snap_url, ts
-
-
-def _robots_parser(base_url: str, client: httpx.Client) -> urllib.robotparser.RobotFileParser:
-    """Fetch (once per host) and parse the site's robots.txt."""
-    parts = urllib.parse.urlsplit(base_url)
-    origin = f"{parts.scheme}://{parts.netloc}"
-    cached = _ROBOTS_CACHE.get(origin)
-    if cached is not None:
-        return cached
-    parser = urllib.robotparser.RobotFileParser()
-    parser.set_url(f"{origin}/robots.txt")
-    try:
-        response = client.get(f"{origin}/robots.txt", timeout=10.0)
-        lines = response.text.splitlines() if response.status_code == 200 else []
-    except httpx.HTTPError:
-        lines = []
-    parser.parse(lines)
-    _ROBOTS_CACHE[origin] = parser
-    return parser
-
-
-def _cache_path(url: str, cache_dir: Path) -> Path:
-    digest = hashlib.sha256(url.encode("utf-8")).hexdigest()[:32]
-    return cache_dir / f"{digest}.json"
-
-
-def _write_cache(url: str, text: str, config: FetchConfig) -> None:
-    """Persist a GET body for *url*; best-effort (disk errors are ignored)."""
-    try:
-        config.cache_dir.mkdir(parents=True, exist_ok=True)
-        cache_file = _cache_path(url, config.cache_dir)
-        tmp = cache_file.with_suffix(".tmp")
-        tmp.write_text(
-            json.dumps({"url": url, "fetched_at": time.time(), "text": text}),
-            encoding="utf-8",
-        )
-        tmp.replace(cache_file)
-    except OSError:
-        pass
-
-
-def _read_cache(url: str, config: FetchConfig) -> str | None:
-    """Fresh cached body for *url*, or None on miss/expiry/corruption."""
-    cache_file = _cache_path(url, config.cache_dir)
-    if not cache_file.exists():
-        return None
-    try:
-        decoded = cast("object", json.loads(cache_file.read_text(encoding="utf-8")))
-    except (OSError, ValueError):
-        return None
-    if not isinstance(decoded, dict):
-        return None
-    payload = cast("dict[str, object]", decoded)
-    fetched_at = payload.get("fetched_at", 0.0)
-    stamp = fetched_at if isinstance(fetched_at, (int, float)) else 0.0
-    if time.time() - stamp >= config.cache_ttl_seconds:
-        return None
-    cached = payload.get("text", "")
-    return cached if isinstance(cached, str) else None
+_API_PATHS: tuple[str, ...] = API_PATHS
 
 
 class PoliteFetcher:
@@ -416,7 +216,7 @@ class PoliteFetcher:
         origin = f"{parts.scheme}://{parts.netloc}"
         host = parts.netloc
         had_robots = origin in _ROBOTS_CACHE
-        parser = _robots_parser(url, self._client)
+        parser = load_robots_parser(url, self._client, _ROBOTS_CACHE)
         if not had_robots:
             _REQUEST_COUNTS[host] = _REQUEST_COUNTS.get(host, 0) + 1
         return parser
@@ -462,54 +262,8 @@ class PoliteFetcher:
         a cache miss. A feed path robots.txt disallows is never returned:
         the feed switch must not bypass a denial.
         """
-        cached = _DISCOVERY_CACHE.get(origin)
-        if cached is not None:
-            feed_url, api_hint, probed_at = cached
-            if time.time() - probed_at < self.config.cache_ttl_seconds:
-                return feed_url, api_hint
-        feed_url = self._find_feed(origin)
-        if feed_url is not None and not parser.can_fetch(agent, feed_url):
-            feed_url = None
-        api_hint = self._find_api(origin)
-        _DISCOVERY_CACHE[origin] = (feed_url, api_hint, time.time())
-        return feed_url, api_hint
-
-    def _head_ok(self, url: str) -> bool:
-        """True when a cheap probe shows *url* exists (2xx)."""
-        try:
-            response = self._counted_head(url)
-        except httpx.HTTPError:
-            return False
-        if response.status_code < 400:
-            return True
-        response = self._counted_get(url)
-        return response.status_code < 400
-
-    def _find_feed(self, origin: str) -> str | None:
-        """First working feed endpoint on *origin*, or None."""
-        for path in _FEED_PATHS:
-            candidate = f"{origin}{path}"
-            try:
-                response = self._counted_get(candidate)
-            except httpx.HTTPError:
-                continue
-            if response.status_code != 200:
-                continue
-            if _is_feed_response(response):
-                return candidate
-        return None
-
-    def _find_api(self, origin: str) -> str | None:
-        """First working machine-API hint on *origin*, or None."""
-        parts = urllib.parse.urlsplit(origin)
-        api_origin = f"{parts.scheme}://api.{parts.netloc}"
-        if self._head_ok(f"{api_origin}/"):
-            return f"{api_origin}/"
-        for path in _API_PATHS:
-            candidate = f"{origin}{path}"
-            if self._head_ok(candidate):
-                return candidate
-        return None
+        discovery = OriginDiscovery(self.config, _DISCOVERY_CACHE, self._counted_head, self._counted_get)
+        return discovery.discover(origin, parser, agent)
 
     def _robots_gate(self, url: str) -> None:
         """Scheme, budget and robots.txt gate without feed/API discovery.
@@ -525,46 +279,6 @@ class PoliteFetcher:
         if not parser.can_fetch(self.config.resolved_user_agent(), url):
             msg = f"robots.txt disallows fetching {url!r}"
             raise RobotDeniedError(msg)
-
-    def _query_wayback(self, url: str) -> tuple[str | None, str | None]:
-        """Query the Wayback availability API for *url*.
-
-        Returns ``(snapshot_url, timestamp)`` when available, else
-        ``(None, None)``. Failures are treated as unavailable.
-        """
-        api_url = f"https://archive.org/wayback/available?url={urllib.parse.quote(url, safe='')}"
-        try:
-            resp = self._client.get(api_url, timeout=self.config.timeout_seconds)
-        except httpx.HTTPError:
-            return None, None
-        if resp.status_code != 200:
-            return None, None
-        try:
-            data = cast("object", json.loads(resp.text))
-        except (ValueError, json.JSONDecodeError):
-            return None, None
-        return _closest_snapshot(data)
-
-    def _fetch_via_wayback(self, url: str) -> FetchResult | None:
-        """Try the Wayback Machine for *url*; None when unavailable."""
-        snap_url, timestamp = self._query_wayback(url)
-        if snap_url is None:
-            return None
-        try:
-            resp = self._client.get(snap_url, timeout=self.config.timeout_seconds)
-        except httpx.HTTPError:
-            return None
-        if resp.status_code != 200:
-            return None
-        text = resp.text
-        _write_cache(url, text, self.config)
-        # Count the snapshot fetch toward the wayback host budget (best-effort).
-        try:
-            host = urllib.parse.urlsplit(snap_url).netloc
-            _REQUEST_COUNTS[host] = _REQUEST_COUNTS.get(host, 0) + 1
-        except Exception:
-            pass
-        return FetchResult(text=text, url=url, from_wayback=True, wayback_url=snap_url, wayback_timestamp=timestamp)
 
     def _resolve_url(self, url: str, *, discover: bool) -> str:
         """Gate *url* and switch to the discovered feed when told to."""
@@ -587,22 +301,17 @@ class PoliteFetcher:
 
     def _wayback_for_error_status(self, url: str, response: httpx.Response) -> FetchResult | None:
         """Wayback result for a 5xx *response*; else raise; None on success."""
-        if response.status_code >= 500 and self.config.wayback_fallback:
-            wb = self._fetch_via_wayback(url)
-            if wb is not None:
-                self.last_result = wb
-                return wb
-        response.raise_for_status()
-        return None
+        result = wayback_for_error_status(self._client, url, response, self.config, _REQUEST_COUNTS)
+        if result is not None:
+            self.last_result = result
+        return result
 
     def _wayback_on_transport_error(self, url: str) -> FetchResult | None:
         """Wayback result after a transport failure; None when not attempted/found."""
-        if self.config.wayback_fallback:
-            wb = self._fetch_via_wayback(url)
-            if wb is not None:
-                self.last_result = wb
-                return wb
-        return None
+        result = wayback_on_transport_error(self._client, url, self.config, _REQUEST_COUNTS)
+        if result is not None:
+            self.last_result = result
+        return result
 
     def fetch_result(self, url: str, *, discover: bool = True) -> FetchResult:
         """GET *url* politely, returning a :class:`FetchResult` with provenance.
@@ -617,7 +326,7 @@ class PoliteFetcher:
         url = self._resolve_url(url, discover=discover)
         host = urllib.parse.urlsplit(url).netloc
         self._wait_for_slot(host)
-        cached_text = _read_cache(url, config)
+        cached_text = read_cached_body(url, config)
         if cached_text is not None:
             result = FetchResult(text=cached_text, url=url)
             self.last_result = result
@@ -646,7 +355,7 @@ class PoliteFetcher:
         # Success path: 2xx.
         assert response is not None
         text = response.text
-        _write_cache(url, text, config)
+        write_cached_body(url, text, config)
         result = FetchResult(text=text, url=url)
         self.last_result = result
         return result

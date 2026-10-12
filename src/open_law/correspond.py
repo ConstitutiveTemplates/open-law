@@ -10,6 +10,10 @@ topic, have plausibly comparable years, and carry similar titles.
 Similarity is ``difflib`` sequence matching over normalized titles —
 deterministic and offline. It is deliberately conservative: it exists
 to save review time, not to declare equivalence.
+
+Corpus plumbing (:class:`CorpusEntry`, annotation loading, primary-
+topic resolution) lives in :mod:`open_law.corpus`, shared with
+:mod:`open_law.coverage`; this module owns only candidate pairing.
 """
 
 from __future__ import annotations
@@ -19,8 +23,8 @@ from collections import defaultdict
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 
-from open_law.coverage import CorpusEntry
-from open_law.topics import classify
+from open_law.corpus import CorpusEntry
+from open_law.corpus import resolve_primary_topic
 
 __all__ = ["Correspondence", "find_correspondences"]
 
@@ -55,19 +59,6 @@ def _normalized(title: str) -> str:
     return re.sub(r"\s+", " ", _NON_WORD_RE.sub(" ", title.lower())).strip()
 
 
-def _primary_topic(
-    entry: CorpusEntry,
-    topics: dict[str, tuple[str, ...]],
-    annotations: dict[str, tuple[str, ...]] | None,
-) -> str | None:
-    """The expert annotation's first topic, else the classifier's top hit."""
-    if annotations is not None:
-        annotated = annotations.get(entry.key)
-        if annotated:
-            return annotated[0]
-    return next(iter(classify(topics, entry.title)), None)
-
-
 def find_correspondences(
     entries: list[CorpusEntry],
     topics: dict[str, tuple[str, ...]],
@@ -88,7 +79,7 @@ def find_correspondences(
     years: dict[str, int | None] = {}
     normalized: dict[str, str] = {}
     for entry in entries:
-        primary = _primary_topic(entry, topics, annotations)
+        primary = resolve_primary_topic(entry, topics, annotations)
         if primary is None:
             continue
         by_topic[primary].append(entry)

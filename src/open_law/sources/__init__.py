@@ -11,8 +11,8 @@ from __future__ import annotations
 
 from open_law.fetcher import FetchConfig
 from open_law.fetcher import PoliteFetcher
-from open_law.sources.base import NotAvailableBySourceError
-from open_law.sources.base import SourceAdapter
+from open_law.sources.adapter import NotAvailableBySourceError
+from open_law.sources.adapter import SourceAdapter
 from open_law.sources.bd import BangladeshLawsAdapter
 from open_law.sources.ca import JusticeLawsAdapter
 from open_law.sources.de import GesetzeImInternetAdapter

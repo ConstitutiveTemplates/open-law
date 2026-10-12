@@ -415,17 +415,30 @@ suppress-none-returning = false
     "PLR0912",# too-many-branches  CONTEXT: test_qa.py の依存宣言チェックは複数分岐が自然
 ]
 "src/open_law/fetcher.py" = [
-    "S310",   # urlopen  CONTEXT: fetcher.py owns the single audited urlopen call-site
     "TID251", # banned-api  CONTEXT: fetcher.py is the allowlisted implementation behind the ban
-    "SLOT000", # str-subclass without slots  CONTEXT: FetchTextResult is a thin provenance str
-    "PLR0911", # too-many-returns  CONTEXT: _query_wayback's archived/closest branches are each one return
-    "S110",    # try-except-pass  CONTEXT: wayback budget increment best-effort — miscount is not a failure
-    "BLE001",  # blind-except  CONTEXT: request-count update for the snapshot host — any parse failure is benign
     "C901",    # complex-structure  CONTEXT: fetch_result's 5xx/wayback branches are each a distinct decision
     "PLR0915", # too-many-statements  CONTEXT: fetch_result's politeness gate + wayback fallback is one method by design
     "PLR0912", # too-many-branches  CONTEXT: status-code and wayback branches each guard a charter constraint
     "TRY300",  # try-consider-else  CONTEXT: the success assignment sits in try — else would split the provenance update
     "TRY301",  # raise-within-try  CONTEXT: AccessDenied for 401/403 is raised inside the GET try to keep budget counting together
+]
+"src/open_law/fetch_models.py" = [
+    "SLOT000", # str-subclass without slots  CONTEXT: FetchTextResult is a thin provenance str
+]
+"src/open_law/fetch_wayback.py" = [
+    "TID251", # banned-api  CONTEXT: fetch_wayback.py is part of the allowlisted fetcher behind the ban
+    "PLR0911", # too-many-returns  CONTEXT: closest_snapshot's archived/closest branches are each one return
+    "S110",    # try-except-pass  CONTEXT: wayback budget increment best-effort — miscount is not a failure
+    "BLE001",  # blind-except  CONTEXT: request-count update for the snapshot host — any parse failure is benign
+]
+"src/open_law/fetch_discovery.py" = [
+    "TID251", # banned-api  CONTEXT: fetch_discovery.py is part of the allowlisted fetcher behind the ban
+]
+"src/open_law/fetch_robots.py" = [
+    "TID251", # banned-api  CONTEXT: fetch_robots.py is part of the allowlisted fetcher behind the ban
+]
+"src/open_law/fetch_cache.py" = [
+    "TID251", # banned-api  CONTEXT: fetch_cache.py is part of the allowlisted fetcher (no direct HTTP, kept for clarity)
 ]
 # logging_setup.py の長い呼び出し（structlog の ConsoleRenderer /
 # make_filtering_bound_logger、loguru の add() など）は line-length 設定により
@@ -434,7 +447,7 @@ suppress-none-returning = false
 "src/open_law/logging_setup.py" = ["E501", "D", "PLW0603", "I001"]
 "src/open_law/__main__.py" = ["C901"]  # complex-structure  CONTEXT: main's 5 subcommand branches are one dispatch by design
 "src/open_law/text_extract.py" = ["D301"]  # escape-sequence-in-docstring  CONTEXT: docstring shows \n\n as literal markers
-"src/open_law/sources/base.py" = [
+"src/open_law/sources/adapter.py" = [
     "PLC0415", # import-outside-top-level  CONTEXT: pypdf is an optional extra, imported only when text_format=pdf
     "RET504",  # unnecessary-assign  CONTEXT: text holds the stripped pypdf join before the scanned-PDF comment
 ]

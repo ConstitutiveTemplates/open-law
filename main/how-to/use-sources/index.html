@@ -446,6 +446,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#fetch-budgets" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Fetch budgets
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#live-probes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Live probes
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#add-a-new-jurisdiction" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -771,6 +793,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#fetch-budgets" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Fetch budgets
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#live-probes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Live probes
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#add-a-new-jurisdiction" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -821,11 +865,13 @@ what every other command calls <code>SOURCE</code>.</p>
 <code>law_id</code>), title and dates, the machine-readable <code>text_url</code>, an
 <code>akn_url</code> when the source offers Akoma Ntoso, and source-specific
 <code>extras</code>. <code>search</code> prints the same shape minus full-text locations.
-<code>fetch jp &lt;law_id&gt;</code> deliberately fails with the registration URL —
-e-Gov's full-text endpoint requires a (free) application key; the
-metadata list does not. The same pattern applies to Korea: <code>search kr</code>
-activates once the <code>LAW_KR_OC</code> open-API id (issued at
-openapi.law.go.kr) is set in the environment. The <code>jp</code> law_ids that the
+<code>fetch jp &lt;law_id&gt;</code> returns the v1 <code>lawdata</code> full-text XML parsed into
+the unified shape — no registration needed (the elsur application key
+is only required for the newer v2 document endpoints, which open-law
+does not use). Korea still needs its key: <code>search kr</code> activates once
+the <code>LAW_KR_OC</code> open-API id (issued at openapi.law.go.kr, bound to
+your server IP — without it the API answers "required-input
+verification failed") is set in the environment. The <code>jp</code> law_ids that the
 e-Gov list returns are exactly what the orimono ecosystem's JLT legal
 corpus (<code>datasets/legal/</code>, five statutes incl. the 2,730-pair Civil Code
 split) scores against — the official MoJ English translations there are
@@ -862,6 +908,28 @@ CSRF-gated to machines, so <code>search</code> declines; the per-law ids come fr
 the human index. This is the <em>English</em> side of the same statute book
 <code>jp</code> (e-Gov) indexes in Japanese — the bridge orimono's legal corpus
 evaluates against.</p>
+<div class="highlight"><pre><span></span><code><span class="gp"># </span>Germany<span class="err">'</span>s<span class="w"> </span>federal<span class="w"> </span>statutes<span class="w"> </span><span class="o">(</span>Gesetze<span class="w"> </span>im<span class="w"> </span>Internet<span class="w"> </span>—<span class="w"> </span>no<span class="w"> </span>key,<span class="w"> </span>static<span class="w"> </span>index<span class="w"> </span>+<span class="w"> </span>HTML<span class="o">)</span>
+<span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>search<span class="w"> </span>de<span class="w"> </span>BGB<span class="w"> </span>--limit<span class="w"> </span><span class="m">3</span>
+<span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>de<span class="w"> </span>bgb<span class="w">        </span><span class="c1"># Bürgerliches Gesetzbuch — text_url is the full-HTML Gesamtausgabe</span>
+</code></pre></div>
+<p>The <code>de</code> source wraps the BMJ/BfJ portal: <code>search</code> matches the query
+against the alphabetical <code>Teilliste_&lt;LETTER&gt;.html</code> index (abbreviation
+and title), <code>fetch</code> takes the portal folder (<code>bgb</code>, <code>stgb</code>) and points
+<code>text_url</code> at the full-HTML edition for <code>text</code> to strip. Per-law
+<code>xml.zip</code> packages exist on the same pages for bulk consumers.</p>
+<div class="highlight"><pre><span></span><code><span class="gp"># </span>Texas<span class="w"> </span>statutes<span class="w"> </span><span class="o">(</span>TCAS<span class="w"> </span>JSON<span class="w"> </span>search<span class="w"> </span>+<span class="w"> </span>static<span class="w"> </span>chapter<span class="w"> </span>HTML<span class="w"> </span>—<span class="w"> </span>no<span class="w"> </span>key<span class="o">)</span>
+<span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>search<span class="w"> </span>us-tx<span class="w"> </span>biometric<span class="w"> </span>--limit<span class="w"> </span><span class="m">5</span>
+<span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>us-tx<span class="w"> </span>BC.503<span class="w">   </span><span class="c1"># Business &amp; Commerce Code ch. 503 (CUBI — biometric identifiers)</span>
+</code></pre></div>
+<p>The <code>us-tx</code> source wraps the Texas Legislature's TCAS backend: <code>search</code>
+is full-text across all codes via the key-free <code>TCASSearch</code> JSON API
+(results map to <code>&lt;CODE&gt;.&lt;chapter&gt;</code> ids), <code>fetch</code> serves the chapter's
+static HTML from the state file server. A trailing section
+(<code>BC.503.001</code>) narrows to the same chapter file — sections share one
+document. California (<code>leginfo.legislature.ca.gov</code>) is Cloudflare-gated
+(403 to machines) and Illinois (<code>ilga.gov</code>) is unreachable from
+datacenter networks — both are documented in
+<code>docs/explanations/jurisdiction-coverage.md</code>, not shipped as adapters.</p>
 <h2 id="read-the-full-text">Read the full text<a class="headerlink" href="#read-the-full-text" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>text<span class="w"> </span>bd<span class="w"> </span><span class="m">43</span><span class="w">        </span><span class="c1"># HTML page -&gt; plain text</span>
 <span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>text<span class="w"> </span>uk<span class="w"> </span>ukpga/1989/6<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-40
@@ -892,14 +960,104 @@ it directly.</p>
 <div class="highlight"><pre><span></span><code><span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>preflight<span class="w"> </span>https://example.com/feed
 </code></pre></div>
 <p>prints the fetcher's judgement as JSON: feed/API discovery, robots.txt
-verdict, and per-host budget state — the tool the charter runs before
-any page fetch.</p>
+verdict, and per-host budget state — the tool the charter runs before</p>
 <h2 id="politeness-is-per-source">Politeness is per source<a class="headerlink" href="#politeness-is-per-source" title="Permanent link">&para;</a></h2>
 <p>Each adapter class declares its own <code>crawl_delay_seconds</code> (mirroring
 the source's robots.txt <code>Crawl-delay</code>, such as legislation.gov.uk's 5)
 and <code>http_headers</code> (CELLAR's content negotiation). The CLI builds the
 default fetcher from those declarations, so every request is polite by
 construction; responses are cached under <code>.cache/fetcher/</code> for a day.</p>
+<h2 id="fetch-budgets">Fetch budgets<a class="headerlink" href="#fetch-budgets" title="Permanent link">&para;</a></h2>
+<p>Recommended <code>FetchConfig</code> per adapter (delay × budget × timeout × cache):</p>
+<table>
+<thead>
+<tr>
+<th>source</th>
+<th style="text-align: right;"><code>crawl_delay_seconds</code></th>
+<th style="text-align: right;"><code>max_requests_per_host</code></th>
+<th style="text-align: right;"><code>timeout_seconds</code></th>
+<th style="text-align: right;"><code>cache_ttl_seconds</code></th>
+<th>notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>np</code></td>
+<td style="text-align: right;">10.0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">86400 (1 day)</td>
+<td><code>Crawl-delay: 10</code> on lawcommission.gov.np</td>
+</tr>
+<tr>
+<td><code>la</code></td>
+<td style="text-align: right;">2.0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">86400</td>
+<td>no robots.txt — conservative 2 s</td>
+</tr>
+<tr>
+<td><code>uk</code></td>
+<td style="text-align: right;">5.0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">86400</td>
+<td><code>Crawl-delay: 5</code> on legislation.gov.uk</td>
+</tr>
+<tr>
+<td><code>bd</code></td>
+<td style="text-align: right;">2.0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">86400</td>
+<td>UTF-16 pages, no robots.txt</td>
+</tr>
+<tr>
+<td><code>ca</code></td>
+<td style="text-align: right;">2.0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">86400</td>
+<td>~5.8 MB for <code>C-46</code>, still budget-safe</td>
+</tr>
+<tr>
+<td><code>de</code></td>
+<td style="text-align: right;">2.0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">86400</td>
+<td>~486 KB indexes, ~3 MB for <code>bgb</code></td>
+</tr>
+<tr>
+<td><code>us-tx</code></td>
+<td style="text-align: right;">2.0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">86400</td>
+<td></td>
+</tr>
+<tr>
+<td>others</td>
+<td style="text-align: right;">1.0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">86400</td>
+<td><code>eu</code>, <code>jp</code>, <code>kr</code>, <code>us</code>, <code>jlt</code> — defaults</td>
+</tr>
+</tbody>
+</table>
+<p>Build a tuned fetcher with <code>FetchConfig(delay_seconds=Adapter.crawl_delay_seconds)</code> via
+<code>open_law.sources.default_fetcher</code>, or construct <code>PoliteFetcher(FetchConfig(...))</code> directly.
+See <code>docs/how-to/fetch-budgets.md</code> for the full matrix, retry guidance with <code>--wayback</code>,
+and bulk-dump timing.</p>
+<h2 id="live-probes">Live probes<a class="headerlink" href="#live-probes" title="Permanent link">&para;</a></h2>
+<p>Live network probes are opt-in. Run one cheap fetch per registered adapter with:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span><span class="nv">OPEN_LAW_LIVE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-m<span class="w"> </span>live<span class="w"> </span>-q
+</code></pre></div>
+<p>Without <code>OPEN_LAW_LIVE=1</code> the <code>live</code> tests are skipped (they are also excluded by default
+via <code>-m "not live"</code>). <code>kr</code> additionally requires <code>LAW_KR_OC</code> (the open-API id at
+openapi.law.go.kr, bound to the caller's IP).</p>
 <h2 id="add-a-new-jurisdiction">Add a new jurisdiction<a class="headerlink" href="#add-a-new-jurisdiction" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Subclass <code>open_law.sources.base.SourceAdapter</code> in

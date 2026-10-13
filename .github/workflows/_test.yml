@@ -100,7 +100,8 @@ jobs:
           curl -fsSL https://github.com/go-task/task/releases/download/v3.46.4/task_linux_amd64.tar.gz \
             | tar -xz -C "$RUNNER_TEMP/task-bin" task
           echo "$RUNNER_TEMP/task-bin" >> "$GITHUB_PATH"
-          task --version
+          "$RUNNER_TEMP/task-bin/task" --version
+
 
       - name: Install Just
         if: inputs.task_runner == 'just'

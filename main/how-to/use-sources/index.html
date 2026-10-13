@@ -930,6 +930,18 @@ document. California (<code>leginfo.legislature.ca.gov</code>) is Cloudflare-gat
 (403 to machines) and Illinois (<code>ilga.gov</code>) is unreachable from
 datacenter networks — both are documented in
 <code>docs/explanations/jurisdiction-coverage.md</code>, not shipped as adapters.</p>
+<div class="highlight"><pre><span></span><code><span class="gp"># </span>Maldives<span class="w"> </span>legislation<span class="w"> </span><span class="o">(</span>mvlaw<span class="w"> </span>—<span class="w"> </span>no<span class="w"> </span>key,<span class="w"> </span>server-rendered<span class="w"> </span>index<span class="w"> </span>+<span class="w"> </span>consolidation<span class="w"> </span>pages<span class="o">)</span>
+<span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>search<span class="w"> </span>mv<span class="w"> </span><span class="s2">"27/2025"</span><span class="w"> </span>--limit<span class="w"> </span><span class="m">5</span>
+<span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>mv<span class="w"> </span><span class="m">291</span><span class="w">        </span><span class="c1"># Zakaath Act 27/2025 — text_url is the latest consolidation</span>
+</code></pre></div>
+<p>The <code>mv</code> source wraps the Attorney General's Office mvlaw database:
+<code>search</code> walks the server-rendered <code>/dv/legislations?page=&lt;n&gt;</code> index
+(20 rows per page, matching title and legislation number), <code>fetch</code>
+takes the numeric legislation id and follows the show route to the
+latest consolidation page, whose embedded section tree is the full
+text. The <code>/api/v1/</code> JSON router the site bundles advertise answers
+401 without a session, so the adapter reads the server-rendered pages
+instead. Content language is Dhivehi (<code>div</code>).</p>
 <h2 id="read-the-full-text">Read the full text<a class="headerlink" href="#read-the-full-text" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>text<span class="w"> </span>bd<span class="w"> </span><span class="m">43</span><span class="w">        </span><span class="c1"># HTML page -&gt; plain text</span>
 <span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>text<span class="w"> </span>uk<span class="w"> </span>ukpga/1989/6<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-40
@@ -1036,6 +1048,14 @@ construction; responses are cached under <code>.cache/fetcher/</code> for a day.
 <td style="text-align: right;">10</td>
 <td style="text-align: right;">86400</td>
 <td></td>
+</tr>
+<tr>
+<td><code>mv</code></td>
+<td style="text-align: right;">2.0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">86400</td>
+<td>server-rendered pages (~200–865 KB)</td>
 </tr>
 <tr>
 <td>others</td>

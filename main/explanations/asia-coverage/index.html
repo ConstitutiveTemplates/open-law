@@ -1060,9 +1060,9 @@ robots-disallowed stays off-limits.</p>
 </tr>
 <tr>
 <td>Maldives 🇲🇻</td>
-<td>agoffice.gov.mv</td>
-<td>📄</td>
-<td>robots.txt <code>Disallow:</code> (empty = allow all, verified); content unverified</td>
+<td>mvlaw.gov.mv (AGO legislation database)</td>
+<td>✅</td>
+<td><code>mv</code> adapter; robots <code>User-agent: *</code> + empty <code>Disallow:</code> (= allow all, verified 2026-10-13); server-rendered <code>/dv/legislations/&lt;id&gt;</code> → latest <code>/consolidations/&lt;cid&gt;</code> pages with the full section tree in the embedded page payload (fetched live 2026-10-13: law 291, 322 sections); discovery via the <code>/dv/legislations?page=&lt;n&gt;</code> index (261 rows, 20/page); the <code>/api/v1/</code> JSON router answers 401 without a session</td>
 </tr>
 <tr>
 <td>Afghanistan 🇦🇫</td>

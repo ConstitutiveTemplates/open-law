@@ -4,7 +4,7 @@ Every adapter consumes an official machine channel (JSON APIs, XML
 statute trees, CELLAR RDF) whose wire format drifts without notice:
 nulls appear where strings were, lists hold stray scalars, payloads
 arrive malformed. These helpers centralize the "parse defensively,
-fail with the source's name in the message" idioms so the twelve
+fail with the source's name in the message" idioms so the thirteen
 adapters stay thin parsing shells over their own endpoints.
 """
 

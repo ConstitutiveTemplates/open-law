@@ -25,7 +25,7 @@ _LIVE_IDS: dict[str, str] = {
     "jp": "325AC0000000041",
     "kr": "2100000000000",  # dummy — skipped unless LAW_KR_OC is set
     "la": "2143",
-    "np": "13535",
+    "mv": "291",
     "uk": "ukcm/2023/1",
     "us": "title-16/part-312/section-312.5",
     "us-tx": "BC.503",

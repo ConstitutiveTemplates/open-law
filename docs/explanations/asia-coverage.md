@@ -59,7 +59,7 @@ robots-disallowed stays off-limits.
 | Pakistan 🇵🇰 | web.molaw.gov.pk | 🔌 | DNS does not resolve from the probe network (verified 2026-09) |
 | Sri Lanka 🇱🇰 | lawnet.gov.lk | 🚫 | TLS certificate hostname mismatch (verified) — fetching would require disabling verification, which the charter refuses |
 | Bhutan 🇧🇹 | ol.gov.bt | 🔌 | DNS does not resolve from the probe network (verified 2026-09) |
-| Maldives 🇲🇻 | agoffice.gov.mv | 📄 | robots.txt `Disallow:` (empty = allow all, verified); content unverified |
+| Maldives 🇲🇻 | mvlaw.gov.mv (AGO legislation database) | ✅ | `mv` adapter; robots `User-agent: *` + empty `Disallow:` (= allow all, verified 2026-10-13); server-rendered `/dv/legislations/<id>` → latest `/consolidations/<cid>` pages with the full section tree in the embedded page payload (fetched live 2026-10-13: law 291, 322 sections); discovery via the `/dv/legislations?page=<n>` index (261 rows, 20/page); the `/api/v1/` JSON router answers 401 without a session |
 | Afghanistan 🇦🇫 | moj.gov.af | 📄 | Real robots.txt present, header-only sampled (verified); content channel unverified |
 
 ## Central Asia & Caucasus

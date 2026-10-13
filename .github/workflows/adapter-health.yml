@@ -141,6 +141,15 @@ jobs:
             echo "FOUND=1" >> "$GITHUB_ENV"
           fi
 
+      - name: Probe mv adapter (fetch 291)
+        run: |
+          if uv run --locked open-law fetch mv 291 >> health.txt 2>&1; then
+            echo "mv: OK" >> health.txt
+          else
+            echo "mv: FAILED" >> health.txt
+            echo "FOUND=1" >> "$GITHUB_ENV"
+          fi
+
       - name: Show probe report
         if: always()
         run: cat health.txt

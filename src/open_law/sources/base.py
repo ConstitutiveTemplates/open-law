@@ -6,7 +6,7 @@ Backward-compatibility shim: the contract now lives in
 :mod:`open_law.sources.markup`, and defensive JSON/XML parsing in
 :mod:`open_law.sources.parsing`. This module re-exports every public
 name so ``from open_law.sources.base import SourceAdapter`` (used by
-all twelve adapters, the test helpers, and third-party adapters)
+all thirteen adapters, the test helpers, and third-party adapters)
 keeps working unchanged.
 """
 

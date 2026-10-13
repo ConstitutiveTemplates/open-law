@@ -36,6 +36,7 @@ unless the site is known-slow or known-large.
 | `ca`   | JusticeLawsAdapter | 2.0 | 100 | 10 | 86400 |
 | `de`   | GesetzeImInternetAdapter | 2.0 | 100 | 10 | 86400 |
 | `us-tx`| TexasStatutesAdapter | 2.0 | 100 | 10 | 86400 |
+| `mv`   | MvLawAdapter | 2.0 | 100 | 10 | 86400 |
 | `eu`   | EurlexAdapter | 1.0 | 100 | 10 | 86400 |
 | `jp`   | EgovAdapter | 1.0 | 100 | 10 | 86400 |
 | `kr`   | KoreaLawAdapter | 1.0 | 100 | 10 | 86400 |

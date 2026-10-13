@@ -21,6 +21,7 @@ from open_law.sources.jlt import JltAdapter
 from open_law.sources.jp import EgovAdapter
 from open_law.sources.kr import KoreaLawAdapter
 from open_law.sources.la import LaoGazetteAdapter
+from open_law.sources.mv import MvLawAdapter
 from open_law.sources.np import NepalLawCommissionAdapter
 from open_law.sources.uk import LegislationGovUkAdapter
 from open_law.sources.us import EcfrAdapter
@@ -41,6 +42,7 @@ ADAPTERS: dict[str, type[SourceAdapter]] = {
     LaoGazetteAdapter.source_id: LaoGazetteAdapter,
     NepalLawCommissionAdapter.source_id: NepalLawCommissionAdapter,
     BangladeshLawsAdapter.source_id: BangladeshLawsAdapter,
+    MvLawAdapter.source_id: MvLawAdapter,
     EurlexAdapter.source_id: EurlexAdapter,
     EcfrAdapter.source_id: EcfrAdapter,
     JusticeLawsAdapter.source_id: JusticeLawsAdapter,

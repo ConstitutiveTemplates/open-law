@@ -110,6 +110,20 @@ document. California (`leginfo.legislature.ca.gov`) is Cloudflare-gated
 datacenter networks — both are documented in
 `docs/explanations/jurisdiction-coverage.md`, not shipped as adapters.
 
+```console
+# Maldives legislation (mvlaw — no key, server-rendered index + consolidation pages)
+$ uv run open-law search mv "27/2025" --limit 5
+$ uv run open-law fetch mv 291        # Zakaath Act 27/2025 — text_url is the latest consolidation
+```
+
+The `mv` source wraps the Attorney General's Office mvlaw database:
+`search` walks the server-rendered `/dv/legislations?page=<n>` index
+(20 rows per page, matching title and legislation number), `fetch`
+takes the numeric legislation id and follows the show route to the
+latest consolidation page, whose embedded section tree is the full
+text. The `/api/v1/` JSON router the site bundles advertise answers
+401 without a session, so the adapter reads the server-rendered pages
+instead. Content language is Dhivehi (`div`).
 ## Read the full text
 
 ```console
@@ -177,6 +191,7 @@ Recommended `FetchConfig` per adapter (delay × budget × timeout × cache):
 | `ca`   | 2.0                 | 100                   | 10             | 86400             | ~5.8 MB for `C-46`, still budget-safe |
 | `de`   | 2.0                 | 100                   | 10             | 86400             | ~486 KB indexes, ~3 MB for `bgb` |
 | `us-tx`| 2.0                 | 100                   | 10             | 86400             | |
+| `mv`   | 2.0                 | 100                   | 10             | 86400             | server-rendered pages (~200–865 KB) |
 | others | 1.0                 | 100                   | 10             | 86400             | `eu`, `jp`, `kr`, `us`, `jlt` — defaults |
 
 Build a tuned fetcher with `FetchConfig(delay_seconds=Adapter.crawl_delay_seconds)` via

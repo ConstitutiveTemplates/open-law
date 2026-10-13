@@ -92,11 +92,15 @@ jobs:
         if: hashFiles('poetry.lock') != ''
         uses: snok/install-poetry@a783c322200f0519c7926aa6faa857c4e23e9263 # v1
 
-      - name: Install Task
+      - name: Install Task # task-version: v3.46.4
         if: inputs.task_runner == 'task'
-        uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2.0.0
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+        # Direct binary install: arduino/setup-task is Node20-deprecated.
+        run: |
+          mkdir -p "$RUNNER_TEMP/task-bin"
+          curl -fsSL https://github.com/go-task/task/releases/download/v3.46.4/task_linux_amd64.tar.gz \
+            | tar -xz -C "$RUNNER_TEMP/task-bin" task
+          echo "$RUNNER_TEMP/task-bin" >> "$GITHUB_PATH"
+          task --version
 
       - name: Install Just
         if: inputs.task_runner == 'just'

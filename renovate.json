@@ -31,7 +31,6 @@
         "snok/install-poetry",
         "actions/upload-artifact",
         "actions/download-artifact",
-        "arduino/setup-task",
         "extractions/setup-just",
         "zizmorcore/zizmor-action"
       ],

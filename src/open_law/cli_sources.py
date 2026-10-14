@@ -23,7 +23,7 @@ from open_law.dataset import dump_jsonl
 from open_law.models import Law
 from open_law.models import LawSummary
 from open_law.sources import ADAPTERS
-from open_law.sources import SourceAdapter
+from open_law.sources.adapter import SourceAdapter
 
 __all__ = ["AdapterFactory", "open_wayback_adapter", "run_source_commands"]
 

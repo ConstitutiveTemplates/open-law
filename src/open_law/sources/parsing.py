@@ -16,9 +16,6 @@ from typing import cast
 
 from defusedxml.ElementTree import fromstring
 
-from open_law.sources.markup import collapse_markup
-from open_law.sources.markup import strip_markup
-
 __all__ = [
     "as_dict",
     "as_dict_list",
@@ -26,11 +23,9 @@ __all__ = [
     "as_str",
     "child_by_local",
     "clamp_limit",
-    "collapse_markup",
     "decode_json",
     "pairs",
     "parse_xml",
-    "strip_markup",
     "xml_child_text",
     "xml_text",
 ]

@@ -25,11 +25,11 @@ from typing_extensions import override
 from open_law.dates import to_iso_date
 from open_law.models import Law
 from open_law.models import LawSummary
-from open_law.sources.base import NotAvailableBySourceError
-from open_law.sources.base import SourceAdapter
-from open_law.sources.base import clamp_limit
-from open_law.sources.base import parse_xml
-from open_law.sources.base import xml_child_text
+from open_law.sources.adapter import NotAvailableBySourceError
+from open_law.sources.adapter import SourceAdapter
+from open_law.sources.parsing import clamp_limit
+from open_law.sources.parsing import parse_xml
+from open_law.sources.parsing import xml_child_text
 
 __all__ = ["KoreaLawAdapter"]
 

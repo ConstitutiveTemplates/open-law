@@ -7,7 +7,7 @@ import pytest
 
 from tests.helpers import FixtureLoader, Offline, RecordingSite
 
-from open_law.sources.base import NotAvailableBySourceError
+from open_law.sources.adapter import NotAvailableBySourceError
 from open_law.sources.eu import EurlexAdapter
 
 _CELEX_URL = "https://publications.europa.eu/resource/celex/32022R2065"

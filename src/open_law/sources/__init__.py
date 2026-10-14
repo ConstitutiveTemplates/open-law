@@ -3,7 +3,7 @@
 ``ADAPTERS`` maps the ``source_id`` every adapter declares to its class;
 :func:`open_adapter` is the single construction point the CLI (and any
 embedding application) uses. Adding a jurisdiction means adding a
-:class:`open_law.sources.base.SourceAdapter` subclass module and one
+:class:`open_law.sources.adapter.SourceAdapter` subclass module and one
 registry line here — nothing else.
 """
 
@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from open_law.fetcher import FetchConfig
 from open_law.fetcher import PoliteFetcher
-from open_law.sources.adapter import NotAvailableBySourceError
 from open_law.sources.adapter import SourceAdapter
 from open_law.sources.bd import BangladeshLawsAdapter
 from open_law.sources.ca import JusticeLawsAdapter
@@ -29,8 +28,6 @@ from open_law.sources.us_tx import TexasStatutesAdapter
 
 __all__ = [
     "ADAPTERS",
-    "NotAvailableBySourceError",
-    "SourceAdapter",
     "default_fetcher",
     "open_adapter",
 ]

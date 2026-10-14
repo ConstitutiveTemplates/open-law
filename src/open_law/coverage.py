@@ -30,32 +30,10 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from open_law.corpus import CorpusEntry
 from open_law.corpus import iter_corpus
-from open_law.corpus import load_annotations
 from open_law.corpus import resolve_topics
 
-__all__ = [
-    "CorpusEntry",
-    "CoverageMatrix",
-    "coverage_matrix",
-    "gap_report",
-    "iter_corpus",
-    "load_annotations",
-    "topics_for",
-]
-
-
-def topics_for(
-    entry: CorpusEntry,
-    topics: dict[str, tuple[str, ...]],
-    annotations: dict[str, tuple[str, ...]] | None,
-) -> tuple[str, ...]:
-    """The topics of one corpus entry: annotation first, classifier second.
-
-    Backward-compatible alias of :func:`open_law.corpus.resolve_topics`.
-    """
-    return resolve_topics(entry, topics, annotations)
+__all__ = ["CoverageMatrix", "coverage_matrix", "gap_report"]
 
 
 @dataclass(frozen=True)

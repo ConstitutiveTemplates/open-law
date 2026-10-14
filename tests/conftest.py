@@ -23,7 +23,7 @@ import pytest
 
 from open_law import fetcher
 from open_law.fetcher import FetchConfig, PoliteFetcher
-from open_law.sources.base import SourceAdapter
+from open_law.sources.adapter import SourceAdapter
 from tests.helpers import FixtureLoader, Offline, RecordingSite
 
 AdapterT = TypeVar("AdapterT", bound=SourceAdapter)

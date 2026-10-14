@@ -355,7 +355,7 @@ def test_fetch_wayback_flag_falls_back_on_network_failure(tmp_path, capsys) -> N
     """--wayback falls back to archive.org on HTTPError/5xx, and reports provenance on stderr."""
     import httpx
     from open_law.fetcher import FetchConfig, PoliteFetcher
-    from open_law.sources.base import SourceAdapter
+    from open_law.sources.adapter import SourceAdapter
     from open_law.models import Law
 
     class _FakeAdapter(SourceAdapter):
@@ -444,7 +444,7 @@ def test_text_command_wayback_reports_snapshot(tmp_path, capsys) -> None:
     import httpx
     import json
     from open_law.fetcher import FetchConfig, PoliteFetcher
-    from open_law.sources.base import SourceAdapter
+    from open_law.sources.adapter import SourceAdapter
     from open_law.models import Law
 
     class _Fake(SourceAdapter):

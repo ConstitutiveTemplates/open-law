@@ -61,11 +61,7 @@ import httpx
 
 from open_law.fetch_cache import read_cached_body
 from open_law.fetch_cache import write_cached_body
-from open_law.fetch_discovery import API_PATHS
-from open_law.fetch_discovery import FEED_PATHS
 from open_law.fetch_discovery import OriginDiscovery
-from open_law.fetch_discovery import is_feed_response as _is_feed_response
-from open_law.fetch_models import CONTACT_PLACEHOLDER
 from open_law.fetch_models import AccessDeniedError
 from open_law.fetch_models import BudgetExceededError
 from open_law.fetch_models import ContactRequiredError
@@ -77,16 +73,10 @@ from open_law.fetch_models import RobotDeniedError
 from open_law.fetch_models import access_denied_error as _access_denied
 from open_law.fetch_models import http_parts as _http_parts
 from open_law.fetch_robots import load_robots_parser
-from open_law.fetch_wayback import closest_snapshot as _closest_snapshot
 from open_law.fetch_wayback import wayback_for_error_status
 from open_law.fetch_wayback import wayback_on_transport_error
 
 __all__ = [
-    "API_PATHS",
-    "CONTACT_PLACEHOLDER",
-    "FEED_PATHS",
-    "_API_PATHS",
-    "_FEED_PATHS",
     "AccessDeniedError",
     "BudgetExceededError",
     "ContactRequiredError",
@@ -96,8 +86,6 @@ __all__ = [
     "PoliteFetcher",
     "Preflight",
     "RobotDeniedError",
-    "_closest_snapshot",
-    "_is_feed_response",
     "fetch_text",
     "preflight",
 ]
@@ -111,13 +99,6 @@ _REQUEST_COUNTS: dict[str, int] = {}
 # every call. Without this, politeness probing itself becomes the load:
 # one page fetch cost HEAD + robots + 8 feed GETs + API probes.
 _DISCOVERY_CACHE: dict[str, tuple[str | None, str | None, float]] = {}
-
-# Feed endpoints probed (in order) before falling back to HTML scraping.
-# A 200 with an XML content-type counts as "feed exists".
-_FEED_PATHS: tuple[str, ...] = FEED_PATHS
-
-# Machine-API hints probed before falling back to HTML scraping.
-_API_PATHS: tuple[str, ...] = API_PATHS
 
 
 class PoliteFetcher:

@@ -17,6 +17,8 @@ import os
 import sys
 import structlog
 
+__all__ = ["get_logger", "setup_logging"]
+
 _configured = False
 
 

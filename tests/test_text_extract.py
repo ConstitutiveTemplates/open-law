@@ -63,7 +63,7 @@ def test_full_text_pdf_requires_pypdf_hint(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(builtins, "__import__", fake_import)
     import httpx
     from open_law.fetcher import FetchConfig, PoliteFetcher
-    from open_law.sources.base import NotAvailableBySourceError
+    from open_law.sources.adapter import NotAvailableBySourceError
     from open_law.sources.la import LaoGazetteAdapter
 
     def handler(request: httpx.Request) -> httpx.Response:

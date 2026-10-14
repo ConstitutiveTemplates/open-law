@@ -21,14 +21,14 @@ from typing_extensions import override
 
 from open_law.models import Law
 from open_law.models import LawSummary
-from open_law.sources.base import SourceAdapter
-from open_law.sources.base import as_dict_list
-from open_law.sources.base import as_dict_or_none
-from open_law.sources.base import as_str
-from open_law.sources.base import clamp_limit
-from open_law.sources.base import decode_json
-from open_law.sources.base import pairs
-from open_law.sources.base import parse_xml
+from open_law.sources.adapter import SourceAdapter
+from open_law.sources.parsing import as_dict_list
+from open_law.sources.parsing import as_dict_or_none
+from open_law.sources.parsing import as_str
+from open_law.sources.parsing import clamp_limit
+from open_law.sources.parsing import decode_json
+from open_law.sources.parsing import pairs
+from open_law.sources.parsing import parse_xml
 
 __all__ = ["EgovAdapter"]
 

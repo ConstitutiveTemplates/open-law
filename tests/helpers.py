@@ -13,7 +13,7 @@ from typing import Protocol
 
 import httpx
 
-from open_law.sources.base import SourceAdapter
+from open_law.sources.adapter import SourceAdapter
 
 Handler = Callable[[httpx.Request], httpx.Response]
 FixtureLoader = Callable[[str], str]

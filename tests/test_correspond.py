@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from open_law.correspond import find_correspondences
-from open_law.coverage import CorpusEntry
+from open_law.corpus import CorpusEntry
 from open_law.topics import DEFAULT_TOPICS
 
 

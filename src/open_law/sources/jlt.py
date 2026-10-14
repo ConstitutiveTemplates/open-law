@@ -27,9 +27,9 @@ from typing_extensions import override
 
 from open_law.models import Law
 from open_law.models import LawSummary
-from open_law.sources.base import NotAvailableBySourceError
-from open_law.sources.base import SourceAdapter
-from open_law.sources.base import strip_markup
+from open_law.sources.adapter import NotAvailableBySourceError
+from open_law.sources.adapter import SourceAdapter
+from open_law.sources.markup import strip_markup
 
 __all__ = ["JltAdapter"]
 

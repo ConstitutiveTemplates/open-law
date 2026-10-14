@@ -29,14 +29,14 @@ from typing_extensions import override
 from open_law.dates import to_iso_date
 from open_law.models import Law
 from open_law.models import LawSummary
-from open_law.sources.base import SourceAdapter
-from open_law.sources.base import as_dict
-from open_law.sources.base import as_dict_list
-from open_law.sources.base import as_str
-from open_law.sources.base import clamp_limit
-from open_law.sources.base import collapse_markup
-from open_law.sources.base import decode_json
-from open_law.sources.base import pairs
+from open_law.sources.adapter import SourceAdapter
+from open_law.sources.markup import collapse_markup
+from open_law.sources.parsing import as_dict
+from open_law.sources.parsing import as_dict_list
+from open_law.sources.parsing import as_str
+from open_law.sources.parsing import clamp_limit
+from open_law.sources.parsing import decode_json
+from open_law.sources.parsing import pairs
 
 __all__ = ["MvLawAdapter"]
 

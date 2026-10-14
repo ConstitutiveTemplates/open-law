@@ -24,9 +24,9 @@ from typing_extensions import override
 from open_law.dates import to_iso_date
 from open_law.models import Law
 from open_law.models import LawSummary
-from open_law.sources.base import NotAvailableBySourceError
-from open_law.sources.base import SourceAdapter
-from open_law.sources.base import collapse_markup
+from open_law.sources.adapter import NotAvailableBySourceError
+from open_law.sources.adapter import SourceAdapter
+from open_law.sources.markup import collapse_markup
 
 __all__ = ["LaoGazetteAdapter"]
 

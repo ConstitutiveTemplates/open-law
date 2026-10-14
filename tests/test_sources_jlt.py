@@ -12,7 +12,7 @@ from __future__ import annotations
 import pytest
 
 from open_law.fetcher import RobotDeniedError
-from open_law.sources.base import NotAvailableBySourceError
+from open_law.sources.adapter import NotAvailableBySourceError
 from open_law.sources.jlt import JltAdapter
 from tests.helpers import FixtureLoader
 from tests.helpers import Offline

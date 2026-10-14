@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from open_law.fetcher import RobotDeniedError
-from open_law.sources.base import NotAvailableBySourceError
+from open_law.sources.adapter import NotAvailableBySourceError
 from open_law.sources.np import NepalLawCommissionAdapter
 from tests.helpers import FixtureLoader, Offline, RecordingSite
 

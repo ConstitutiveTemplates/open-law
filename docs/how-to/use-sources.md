@@ -224,7 +224,7 @@ openapi.law.go.kr, bound to the caller's IP).
 
 ## Add a new jurisdiction
 
-1. Subclass `open_law.sources.base.SourceAdapter` in
+1. Subclass `open_law.sources.adapter.SourceAdapter` in
    `src/open_law/sources/<country>.py`; implement `search` and `fetch`,
    parsing into `open_law.models.LawSummary` / `Law`. If a capability
    is genuinely unavailable, raise `NotAvailableBySourceError` with the

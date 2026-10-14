@@ -87,8 +87,9 @@ class SourceAdapter(ABC):
             import pypdf  # type: ignore[import-not-found,import-untyped]
         except ImportError as exc:
             msg = (
-                f"full text of {law_id!r} is a PDF; install the pdf extra "
-                f"with `pip install open-law[pdf]` to extract it (download at {text_url})"
+                f"full text of {law_id!r} is a PDF; install open-law with the pdf extra "
+                f"(`uv tool install 'open-law[pdf] @ git+https://github.com/politeuma/open-law.git@<commit>'`, "
+                f"or `uv sync --extra pdf` in a clone) to extract it (download at {text_url})"
             )
             raise NotAvailableBySourceError(msg) from exc
         data = self._get_bytes(text_url)
@@ -119,8 +120,8 @@ class SourceAdapter(ABC):
         ``text_format``: ``xml`` (statute APIs ship the text inside the
         XML tree) extracts character data; ``html`` strips the page to
         readable text. ``pdf`` sources extract via ``pypdf`` when
-        installed — otherwise the error tells the caller to
-        ``pip install open-law[pdf]``.
+        installed — otherwise the error tells the caller how to install
+        the ``pdf`` extra.
         """
         law = self.fetch(law_id)
         if self.text_format == "pdf":

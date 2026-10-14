@@ -82,7 +82,7 @@ def test_full_text_pdf_requires_pypdf_hint(tmp_path, monkeypatch) -> None:
     adapter = LaoGazetteAdapter(fetcher)
     import pytest as _pytest
 
-    with _pytest.raises(NotAvailableBySourceError, match=r"pip install open-law\[pdf\]"):
+    with _pytest.raises(NotAvailableBySourceError, match=r"uv sync --extra pdf"):
         adapter.full_text("2143")
 
 

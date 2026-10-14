@@ -14,7 +14,7 @@ with Akoma Ntoso locations surfaced whenever a source offers them.
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-3776AB.svg?logo=python&logoColor=white)](https://github.com/politeuma/open-law)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Copier](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/copier-org/copier/master/img/badge/badge-black.json)](https://github.com/copier-org/copier)
-[![Documentation](https://img.shields.io/badge/docs-https://constitutivetemplates.github.io/open-law-8A2BE2?logo=gitbook&logoColor=white)](https://constitutivetemplates.github.io/open-law)
+[![Documentation](https://img.shields.io/badge/docs-politeuma.github.io%2Fopen--law-8A2BE2?logo=gitbook&logoColor=white)](https://politeuma.github.io/open-law)
 
 </div>
 
@@ -50,38 +50,43 @@ with Akoma Ntoso locations surfaced whenever a source offers them.
 
 ## 📦 Installation
 
-```sh
-pip install open-law
+open-law is not on PyPI yet, and no release has been tagged, so install it
+from GitHub with [uv](https://docs.astral.sh/uv/) and pin a commit (switch
+to `@<tag>` once releases exist). The commit below is an example — pick the
+latest from the [commit history](https://github.com/politeuma/open-law/commits/main).
 
+```sh
+# Run once without installing anything
+uvx --from git+https://github.com/politeuma/open-law.git@49ad7b28596f403a5678b7723a6fd8416aec715a open-law sources
+
+# Or put `open-law` on your PATH
+uv tool install git+https://github.com/politeuma/open-law.git@49ad7b28596f403a5678b7723a6fd8416aec715a
+
+# PDF full texts (Laos) need the pdf extra
+uv tool install 'open-law[pdf] @ git+https://github.com/politeuma/open-law.git@49ad7b28596f403a5678b7723a6fd8416aec715a'
 ```
 
-<details>
-<summary><b>Platform-specific setup</b></summary>
-
-> [!WARNING]
-> The exact commands depend on your operating system.
-
-| OS | Command |
-|----|---------|
-| Linux/macOS | `python -m open_law --help` |
-| Windows | `py -m open_law --help` |
-
-
-</details>
 
 
 ## 🚀 Quick start
 
+The fetcher refuses to contact any site until you give it an address the
+site's operators can reach (it goes into the User-Agent):
+
 ```sh
-uv run open-law sources                    # list the jurisdiction adapters
-uv run open-law search jp 銀行法 --limit 3  # title-search e-Gov's law list
-uv run open-law fetch uk ukcm/2023/1       # one law's metadata as JSON
-uv run open-law fetch eu 32022R2065        # EU law by CELEX number
-uv run open-law dump bd 43 1004 --out laws.jsonl  # consolidate as JSONL
-uv run open-law preflight https://example.com/feed
+export FETCHER_CONTACT=you@example.org     # replace with your own address
+open-law sources                           # list the jurisdiction adapters
+open-law search jp 銀行法 --limit 3         # title-search e-Gov's law list
+open-law fetch uk ukcm/2023/1              # one law's metadata as JSON
+open-law fetch eu 32022R2065               # EU law by CELEX number
+open-law dump bd 43 1004 --out laws.jsonl  # consolidate as JSONL
+open-law preflight https://example.com/feed
 ```
 
-Or as a library:
+From a clone (see Development setup below), prefix the
+commands with `uv run`.
+
+Or as a library (`uv add 'open-law @ git+https://github.com/politeuma/open-law.git@49ad7b28596f403a5678b7723a6fd8416aec715a'`):
 
 ```python
 from open_law.sources import open_adapter
@@ -96,7 +101,7 @@ The project also ships a **polite web-fetching layer** under the
 on-disk cache, contactable User-Agent):
 
 ```sh
-uv run python -c "from open_law.fetcher import fetch_text; print(fetch_text('https://example.com/')[:200])"
+FETCHER_CONTACT=you@example.org uv run python -c "from open_law.fetcher import fetch_text; print(fetch_text('https://example.com/')[:200])"
 # tests run fully offline: pytest tests/test_scraping.py -q
 ```
 
@@ -108,7 +113,7 @@ permission.
 
 
 > [!TIP]
-> See the [documentation](https://constitutivetemplates.github.io/open-law) for tutorials, how-to guides and the API reference.
+> See the [documentation](https://politeuma.github.io/open-law) for tutorials, how-to guides and the API reference.
 
 
 ## 🧰 What's included
@@ -116,7 +121,7 @@ permission.
 What            | Where
 :---:           | :---:
 Source          | <https://github.com/politeuma/open-law>
-Documentation   | <https://constitutivetemplates.github.io/open-law>
+Documentation   | <https://politeuma.github.io/open-law>
 Releases        | <https://github.com/politeuma/open-law/releases>
 Security        | [SECURITY.md](SECURITY.md) — how to report a vulnerability
 Agent guide     | [AGENTS.md](AGENTS.md) — instructions for AI coding agents
@@ -167,7 +172,7 @@ just check
 
 See [AGENTS.md](AGENTS.md) for AI-agent guidance (commands, edit scope, commit rules).
 
-See the [how-to guides](https://constitutivetemplates.github.io/open-law/how-to) for details on contributing,
+See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for details on contributing,
 running tests and making a release.
 
 
@@ -187,7 +192,7 @@ uvx copier update --trust --defaults
 
 Resolve any conflicts, run `just fix` and
 `just check`, then commit. See the template's
-[adopt/update guide](https://constitutivetemplates.github.io/architekton-py/main/how-to/update-template/)
+[adopt/update guide](https://politeuma.github.io/architekton-py/main/how-to/update-template/)
 for the conflict-resolution workflow.
 
 
@@ -197,4 +202,4 @@ for the conflict-resolution workflow.
 
 <!-- README only content. Anything below this line won't be included in index.md -->
 
-See https://constitutivetemplates.github.io/open-law for more detailed documentation.
+See https://politeuma.github.io/open-law for more detailed documentation.

@@ -46,9 +46,17 @@ _INFORCE_RE = re.compile(r'in-force="([^"]+)"')
 _AMENDED_RE = re.compile(r'lastAmendedDate="([^"]+)"')
 
 
-def _today() -> str:
-    """Fallback modified date when the XML carries no point-in-time stamp."""
-    return dt.datetime.now(dt.UTC).date().isoformat()
+def _iso_day(value: str | None) -> str | None:
+    """ISO-8601 day from a Justice Laws timestamp (``YYYY-MM-DD…``), else ``None``."""
+    if value is None:
+        return None
+    text = value.strip()
+    if not text:
+        return None
+    try:
+        return dt.date.fromisoformat(text[:10]).isoformat()
+    except ValueError:
+        return None
 
 
 def _normalise_code(law_id: str) -> str | None:
@@ -73,6 +81,7 @@ class JusticeLawsAdapter(SourceAdapter):
     source_id: ClassVar[str] = "ca"
     name: ClassVar[str] = "Justice Laws Website (Department of Justice)"
     jurisdiction: ClassVar[str] = "CA"
+    channel: ClassVar[str] = "statutes"
     homepage: ClassVar[str] = "https://laws-lois.justice.gc.ca/eng/"
     license_note: ClassVar[str] = (
         "Crown copyright — reproduction of federal legislation permitted for non-commercial purposes with attribution"
@@ -103,8 +112,10 @@ class JusticeLawsAdapter(SourceAdapter):
         *law_id* is the act code (``P-8.6``, ``C-46``); the ``.xml`` suffix
         and ``acts/`` prefix are tolerated. Title prefers the official
         ShortTitle (e.g. "Personal Information Protection and Electronic
-        Documents Act"), falling back to the LongTitle; ``modified``
-        carries the consolidation's point-in-time date.
+        Documents Act"), falling back to the LongTitle;
+        ``consolidated_as_of`` carries the consolidation's point-in-time
+        date (``None`` when the XML stamps none — never the fetch date),
+        and ``last_amended`` the ``lastAmendedDate`` the XML reports.
         """
         code = _normalise_code(law_id)
         if code is None:
@@ -120,19 +131,19 @@ class JusticeLawsAdapter(SourceAdapter):
         pit = _PIT_RE.search(body)
         amended = _AMENDED_RE.search(body)
         inforce = _INFORCE_RE.search(body)
-        extras: list[tuple[str, str]] = [("format", "justice-xml")]
+        extras = {"format": "justice-xml"}
         if inforce:
-            extras.append(("in_force", inforce.group(1)))
-        if amended:
-            extras.append(("last_amended", amended.group(1)))
+            extras["in_force"] = inforce.group(1)
         return Law(
             source=self.source_id,
             jurisdiction=self.jurisdiction,
+            channel=self.channel,
             law_id=code,
             title=title,
             url=f"{_HUMAN}/eng/acts/{code}/",
             language="eng",
-            modified=pit.group(1) if pit else _today(),
+            last_amended=_iso_day(amended.group(1)) if amended else None,
+            consolidated_as_of=_iso_day(pit.group(1)) if pit else None,
             text_url=url,
-            extras=tuple(extras),
+            extras=extras,
         )

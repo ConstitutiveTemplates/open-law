@@ -97,14 +97,15 @@ def _full_text(sections: object) -> str:
     return "\n\n".join(parts)
 
 
-def _summary(row: dict[str, object], source_id: str, jurisdiction: str) -> LawSummary:
+def _summary(row: dict[str, object], adapter: type[SourceAdapter]) -> LawSummary:
     """One index row as a :class:`LawSummary`."""
     law_id = str(row.get("id"))
     title = as_str(row.get("title")) or law_id
     url = as_str(row.get("latest_consolidation_url")) or as_str(row.get("permalink"))
     return LawSummary(
-        source=source_id,
-        jurisdiction=jurisdiction,
+        source=adapter.source_id,
+        jurisdiction=adapter.jurisdiction,
+        channel=adapter.channel,
         law_id=law_id,
         title=title,
         promulgation_date=_iso_date(row.get("published_at")),
@@ -124,6 +125,7 @@ class MvLawAdapter(SourceAdapter):
     source_id: ClassVar[str] = "mv"
     name: ClassVar[str] = "mvlaw (Attorney General's Office, Maldives)"
     jurisdiction: ClassVar[str] = "MV"
+    channel: ClassVar[str] = "legislation"
     homepage: ClassVar[str] = "https://mvlaw.gov.mv"
     license_note: ClassVar[str] = "Government of Maldives publication (no explicit reuse licence)"
     crawl_delay_seconds: ClassVar[float] = 2.0
@@ -155,7 +157,7 @@ class MvLawAdapter(SourceAdapter):
                 number = as_str(row.get("legislation_no")) or ""
                 if needle not in f"{title.lower()} {number.lower()}":
                     continue
-                summaries.append(_summary(row, self.source_id, self.jurisdiction))
+                summaries.append(_summary(row, type(self)))
                 if len(summaries) >= size:
                     break
             last_page = index.get("last_page")
@@ -192,6 +194,7 @@ class MvLawAdapter(SourceAdapter):
         return Law(
             source=self.source_id,
             jurisdiction=self.jurisdiction,
+            channel=self.channel,
             law_id=lid,
             title=title,
             promulgation_date=_iso_date(legislation.get("published_at")),

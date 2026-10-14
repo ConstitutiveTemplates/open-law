@@ -13,7 +13,7 @@ import datetime as dt
 import pytest
 
 from open_law.fetcher import RobotDeniedError
-from open_law.sources.us import EcfrAdapter
+from open_law.sources.us_ecfr import EcfrAdapter
 from tests.helpers import FixtureLoader, Offline, RecordingSite
 
 _SEARCH_URL = "https://www.ecfr.gov/api/search/v1/results"
@@ -35,19 +35,19 @@ def test_search_maps_hierarchy_to_ecfr_paths(
     assert len(results) == 2
 
     section = results[0]
-    assert section.source == "us"
+    assert section.source == "us-ecfr"
     assert section.jurisdiction == "US"
     assert section.law_id == "title-37/section-202.2"
     assert section.title == "Copyright notice."
     assert section.promulgation_date == "2017-09-12"
     assert section.url == "https://www.ecfr.gov/current/title-37/section-202.2"
-    assert ("node_type", "Section") in section.extras
-    assert ("change_types", "cross_reference") in section.extras
+    assert section.extras["node_type"] == "Section"
+    assert section.extras["change_types"] == "cross_reference"
 
     part = results[1]
     assert part.law_id == "title-16/part-312"
     assert part.title == "Children's Online Privacy Protection Rule"
-    assert ("node_type", "Part") in part.extras
+    assert part.extras["node_type"] == "Part"
 
     requested = [u for u in seen if "search/v1/results" in u]
     assert requested == [f"{_SEARCH_URL}?query=copyright&per_page=10"]
@@ -84,7 +84,7 @@ def test_fetch_section_returns_law_with_head_title(
     assert law.title == "§ 312.5 Parental consent."
     assert law.language == "eng"
     assert law.text_url is not None and "part=312" in law.text_url and "section=312.5" in law.text_url
-    assert ("format", "ecfr-xml") in law.extras
+    assert law.extras["format"] == "ecfr-xml"
 
 
 def test_fetch_unrecognised_node_raises(offline: Offline, recording_site: RecordingSite) -> None:

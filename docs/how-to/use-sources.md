@@ -36,30 +36,42 @@ $ uv run open-law fetch eu 32022R2065
 ```
 
 `fetch` prints the unified JSON: identity (`source`, `jurisdiction`,
-`law_id`), title and dates, the machine-readable `text_url`, an
-`akn_url` when the source offers Akoma Ntoso, and source-specific
-`extras`. `search` prints the same shape minus full-text locations.
-`fetch jp <law_id>` returns the v1 `lawdata` full-text XML parsed into
-the unified shape — no registration needed (the elsur application key
-is only required for the newer v2 document endpoints, which open-law
-does not use). Korea still needs its key: `search kr` activates once
+`channel`, `law_id`), title and dates, the machine-readable `text_url`,
+an `akn_url` when the source offers Akoma Ntoso, and source-specific
+`extras` (a JSON object). `search` prints the same shape minus
+full-text locations. Version dates are `last_amended` (the most recent
+amendment the source reports, `None` when it states none — never a
+fetch date) and `consolidated_as_of` (the point-in-time the served
+text reflects).
+
+`fetch jp <law_id>` mixes two e-Gov API versions by design: title
+search runs against the v2 `/laws` endpoint, but the body text still
+comes from the v1 `lawdata` full-text XML — v1 returns the current
+consolidation with no revision history of its own, so amendment
+awareness comes from the v2 `revision_info` shape alone
+(`amendment_promulgate_date` → `last_amended`,
+`amendment_enforcement_date` → `consolidated_as_of`). No registration
+is needed (the elsur application key is only required for the newer
+v2 document endpoints, which open-law does not use). Korea still needs
+its key: `search kr` activates once
 the ``LAW_KR_OC`` open-API id (issued at openapi.law.go.kr, bound to
 your server IP — without it the API answers "required-input
 verification failed") is set in the environment.
 
 ```console
 # US federal regulations (eCFR — no key, structured XML)
-$ uv run open-law search us "children online privacy" --limit 5
-$ uv run open-law fetch us title-16/part-312        # the COPPA Rule
-$ uv run open-law fetch us title-16/part-312/section-312.5
+$ uv run open-law search us-ecfr "children online privacy" --limit 5
+$ uv run open-law fetch us-ecfr title-16/part-312        # the COPPA Rule
+$ uv run open-law fetch us-ecfr title-16/part-312/section-312.5
 ```
 
-The `us` source wraps the eCFR public API: `search` is full-text across
+The `us-ecfr` source wraps the eCFR public API: `search` is full-text across
 all 50 titles and maps each hit to an eCFR path (`title-N[/part-P|
-/section-S]`), `fetch` returns that node's dated XML. Statutes (the US
-Code) sit on a different channel (uscode.house.gov) that is currently
-bot-gated and out of scope — regulations are the machine-readable bulk
-of US regulatory law.
+/section-S]`), `fetch` returns that node's dated XML. The id says
+`us-ecfr` (not `us`) because the channel is regulations only: statutes
+(the US Code) sit on a different channel (uscode.house.gov) that is
+currently bot-gated and out of scope — regulations are the
+machine-readable bulk of US regulatory law.
 
 ```console
 # Canada's consolidated federal statutes (Justice Laws Website XML)
@@ -70,7 +82,8 @@ $ uv run open-law fetch ca C-46     # Criminal Code (~6 MB consolidation)
 The `ca` source has no machine keyword search (the legacy search form
 returns an empty page to machines) — fetch by act code from the
 human acts index. The XML carries the consolidation's point-in-time
-date as `modified` and the in-force flag in `extras`.
+date as `consolidated_as_of`, the `lastAmendedDate` as `last_amended`,
+and the in-force flag in `extras`.
 
 ```console
 # Japan's official English translations (JLT — Ministry of Justice)
@@ -203,7 +216,7 @@ Recommended `FetchConfig` per adapter (delay × budget × timeout × cache):
 | `de`   | 2.0                 | 100                   | 10             | 86400             | ~486 KB indexes, ~3 MB for `bgb` |
 | `us-tx`| 2.0                 | 100                   | 10             | 86400             | |
 | `mv`   | 2.0                 | 100                   | 10             | 86400             | server-rendered pages (~200–865 KB) |
-| others | 1.0                 | 100                   | 10             | 86400             | `eu`, `jp`, `kr`, `us`, `jlt` — defaults |
+| others | 1.0                 | 100                   | 10             | 86400             | `eu`, `jp`, `kr`, `us-ecfr`, `jlt` — defaults |
 
 Build a tuned fetcher with `FetchConfig(delay_seconds=Adapter.crawl_delay_seconds)` via
 `open_law.sources.default_fetcher`, or construct `PoliteFetcher(FetchConfig(...))` directly.

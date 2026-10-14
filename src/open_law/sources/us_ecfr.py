@@ -6,7 +6,9 @@ deepest hierarchy node (title/part/section) and fetch pulls the dated
 full-XML for that title. Query-highlight ``<strong>``/``<span>`` markup
 in headings is stripped for display titles; the dated title XML already
 carries the section text, so no HTML scraping is needed.
-``modified`` pins the point-in-time date of the fetched XML, and
+``consolidated_as_of`` pins the point-in-time date of the fetched XML
+(the eCFR serves the current text), ``last_amended`` stays ``None``
+because the API reports no per-node amendment date, and
 ``promulgation_date`` on summaries carries the search-side
 ``starts_on`` when the API reports one.
 """
@@ -39,7 +41,7 @@ _HEAD_RE = re.compile(r"<HEAD[^>]*>(.*?)</HEAD>", re.DOTALL)
 
 
 def _today() -> str:
-    """Point-in-time date for ``full/`` URLs (eCFR serves the current text)."""
+    """Point-in-time date for ``full/`` URLs and ``consolidated_as_of`` (eCFR serves the current text)."""
     return dt.datetime.now(dt.UTC).date().isoformat()
 
 
@@ -99,9 +101,10 @@ def _full_url(law_id: str) -> tuple[str, str | None]:
 class EcfrAdapter(SourceAdapter):
     """Search and fetch US federal regulations via the eCFR public API."""
 
-    source_id: ClassVar[str] = "us"
+    source_id: ClassVar[str] = "us-ecfr"
     name: ClassVar[str] = "eCFR — Code of Federal Regulations (OFR/NARA)"
     jurisdiction: ClassVar[str] = "US"
+    channel: ClassVar[str] = "regulations"
     homepage: ClassVar[str] = "https://www.ecfr.gov"
     license_note: ClassVar[str] = "US government work — public domain (17 USC §105)"
     crawl_delay_seconds: ClassVar[float] = 1.0
@@ -126,18 +129,19 @@ class EcfrAdapter(SourceAdapter):
                 continue
             node_type = as_str(row.get("type")) or "?"
             starts = as_str(row.get("starts_on"))
-            extras: list[tuple[str, str]] = [("node_type", node_type)]
+            extras = {"node_type": node_type}
             if change_types := row.get("change_types"):
-                extras.append(("change_types", ",".join(str(c) for c in cast("list[object]", change_types))))
+                extras["change_types"] = ",".join(str(c) for c in cast("list[object]", change_types))
             summaries.append(
                 LawSummary(
                     source=self.source_id,
                     jurisdiction=self.jurisdiction,
+                    channel=self.channel,
                     law_id=law_id,
                     title=title,
                     promulgation_date=starts,
                     url=f"{_HUMAN}/current/{law_id.replace('/', '/')}",
-                    extras=tuple(extras),
+                    extras=extras,
                 )
             )
         return summaries[:size]
@@ -148,8 +152,9 @@ class EcfrAdapter(SourceAdapter):
 
         *law_id* is an eCFR path (``title-16/part-312`` or
         ``title-16/part-312/section-312.5``). The dated ``full`` endpoint is
-        pinned to today — eCFR is a point-in-time corpus, and ``modified``
-        in the summary carries the search-side ``starts_on`` when known.
+        pinned to today — eCFR is a point-in-time corpus, so
+        ``consolidated_as_of`` is that date; ``last_amended`` stays
+        ``None`` because the API reports no per-node amendment date.
         """
         url, problem = _full_url(law_id)
         if problem is not None:
@@ -163,11 +168,13 @@ class EcfrAdapter(SourceAdapter):
         return Law(
             source=self.source_id,
             jurisdiction=self.jurisdiction,
+            channel=self.channel,
             law_id=law_id,
             title=title or law_id,
             url=f"{_HUMAN}/current/{law_id.replace('/', '/')}",
             language="eng",
-            modified=_today(),
+            last_amended=None,
+            consolidated_as_of=_today(),
             text_url=url,
-            extras=(("format", "ecfr-xml"),),
+            extras={"format": "ecfr-xml"},
         )

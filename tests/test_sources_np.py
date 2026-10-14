@@ -25,7 +25,7 @@ def test_fetch_parses_act_page(offline: Offline, recording_site: RecordingSite, 
     assert law.title == "राष्‍ट्र ऋण उठाउने ऐन, २०८२"
     assert law.url == _ACT_URL
     assert law.text_url == _ACT_URL
-    assert law.extras == (("content_id", "13535"),)
+    assert law.extras == {"content_id": "13535"}
     assert seen == ["https://lawcommission.gov.np/robots.txt", _ACT_URL]
 
 

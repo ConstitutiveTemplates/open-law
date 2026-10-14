@@ -65,6 +65,7 @@ class LaoGazetteAdapter(SourceAdapter):
     source_id: ClassVar[str] = "la"
     name: ClassVar[str] = "Lao Official Gazette"
     jurisdiction: ClassVar[str] = "LA"
+    channel: ClassVar[str] = "gazette"
     homepage: ClassVar[str] = "https://laoofficialgazette.gov.la"
     license_note: ClassVar[str] = "Government of Laos publication"
     crawl_delay_seconds: ClassVar[float] = 2.0
@@ -87,17 +88,18 @@ class LaoGazetteAdapter(SourceAdapter):
             raise LookupError(msg)
         pdf_match = _PDF_RE.search(body)
         pdf_url = f"{_BASE}{pdf_match.group(1)}" if pdf_match else None
-        extras = [(key, fields[label]) for label, (_, key) in _LABEL_MAP.items() if key != "title" and label in fields]
+        extras = {key: fields[label] for label, (_, key) in _LABEL_MAP.items() if key != "title" and label in fields}
         return Law(
             source=self.source_id,
             jurisdiction=self.jurisdiction,
+            channel=self.channel,
             law_id=number,
             title=title,
             promulgation_date=to_iso_date(fields.get("ວັນທີ່ ນິຕິກໍາ"), dayfirst=True),
             language="lo",
             url=url,
             text_url=pdf_url,
-            extras=tuple(extras),
+            extras=extras,
         )
 
     @override

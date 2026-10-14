@@ -28,13 +28,14 @@ def test_fetch_parses_metadata_xml(
     assert law.law_id == "ukcm/2023/1"
     assert law.title == "Diocesan Stipends Funds (Amendment) Measure 2023"
     assert law.language == "en"
-    assert law.modified == "2023-11-23"
+    assert law.last_amended is None
+    assert law.consolidated_as_of == "2023-06-29"
     assert law.url == "http://www.legislation.gov.uk/ukcm/2023/1"
     assert law.text_url == "https://www.legislation.gov.uk/ukcm/2023/1/data.xml"
     assert law.akn_url == "https://www.legislation.gov.uk/ukcm/2023/1/data.akn"
-    assert ("legislation_type", "Primary") in law.extras
-    assert ("provisions", "3") in law.extras
-    assert ("publisher", "Statute Law Database") in law.extras
+    assert law.extras["legislation_type"] == "Primary"
+    assert law.extras["provision_count"] == "3"
+    assert law.extras["publisher"] == "Statute Law Database"
     assert seen == [
         "https://www.legislation.gov.uk/robots.txt",
         "https://www.legislation.gov.uk" + _DATA_XML,
@@ -68,8 +69,8 @@ def test_fetch_without_metadata_falls_back_to_url(offline: Offline, recording_si
     adapter = offline(LegislationGovUkAdapter, recording_site({_DATA_XML: bare}, []))
     law = adapter.fetch("ukcm/2023/1")
     assert law.title == law.text_url
-    assert ("legislation_type", "Primary") in law.extras
-    assert ("provisions", "3") not in law.extras
+    assert law.extras["legislation_type"] == "Primary"
+    assert "provision_count" not in law.extras
 
 
 def test_fetch_empty_root_has_no_extras(offline: Offline, recording_site: RecordingSite) -> None:
@@ -77,7 +78,7 @@ def test_fetch_empty_root_has_no_extras(offline: Offline, recording_site: Record
     adapter = offline(LegislationGovUkAdapter, recording_site({_DATA_XML: empty}, []))
     law = adapter.fetch("ukcm/2023/1")
     assert law.title == law.text_url
-    assert law.extras == ()
+    assert law.extras == {}
 
 
 def test_search_is_not_offered(offline: Offline, recording_site: RecordingSite) -> None:

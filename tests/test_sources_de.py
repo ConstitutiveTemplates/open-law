@@ -25,7 +25,7 @@ def test_search_finds_bgb_by_abbreviation(
     assert first.law_id == "bgb"
     assert first.title == "Bürgerliches Gesetzbuch"
     assert first.url == "https://www.gesetze-im-internet.de/bgb/index.html"
-    assert ("abbrev", "BGB") in first.extras
+    assert first.extras["abbrev"] == "BGB"
     assert "https://www.gesetze-im-internet.de/Teilliste_B.html" in seen
 
 
@@ -67,7 +67,7 @@ def test_fetch_resolves_full_html_text_url(
     assert law.title == (
         "Rechtsverordnung des Präsidenten des Bundesausgleichsamtes zur Einführung von Rechtsverordnungen im Saarland"
     )
-    assert ("format", "gii-html") in law.extras
+    assert law.extras["format"] == "gii-html"
     assert seen == [
         "https://www.gesetze-im-internet.de/robots.txt",
         "https://www.gesetze-im-internet.de/baasaareinfdv/index.html",

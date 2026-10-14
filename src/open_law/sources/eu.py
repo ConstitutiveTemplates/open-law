@@ -13,6 +13,7 @@ Services Act regulation).
 
 from __future__ import annotations
 
+import datetime as dt
 import urllib.parse
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -51,8 +52,21 @@ class _RdfFacts:
     title_short: str | None = None
     language: str | None = None
     created: str | None = None
-    modified: str | None = None
+    last_modified: str | None = None
     resource_type: str | None = None
+
+
+def _iso_day(value: str | None) -> str | None:
+    """ISO-8601 day from a CELLAR datetime (``2023-12-13T10:52…``), else ``None``."""
+    if value is None:
+        return None
+    text = value.strip()
+    if not text:
+        return None
+    try:
+        return dt.date.fromisoformat(text[:10]).isoformat()
+    except ValueError:
+        return None
 
 
 def _first_text(description: ET.Element, qnames: tuple[str, ...]) -> str | None:
@@ -91,7 +105,7 @@ def _scan_descriptions(root: ET.Element) -> _RdfFacts:
             or _first_text(description, tuple(f"{_CDM}{prop}" for prop in _TITLE_PROPS[2:])),
             language=facts.language or _first_resource(description, ("expression_uses_language", "lang")),
             created=facts.created or _first_text(description, (f"{_CMR}creationDate",)),
-            modified=facts.modified or _first_text(description, (f"{_CMR}lastModificationDate",)),
+            last_modified=facts.last_modified or _first_text(description, (f"{_CMR}lastModificationDate",)),
             resource_type=facts.resource_type or _rdf_type(description),
         )
     return facts
@@ -103,6 +117,7 @@ class EurlexAdapter(SourceAdapter):
     source_id: ClassVar[str] = "eu"
     name: ClassVar[str] = "EUR-Lex / CELLAR (Publications Office)"
     jurisdiction: ClassVar[str] = "EU"
+    channel: ClassVar[str] = "legislation"
     homepage: ClassVar[str] = "https://eur-lex.europa.eu"
     license_note: ClassVar[str] = "Commission Decision 2011/833/EU (reuse with attribution)"
     crawl_delay_seconds: ClassVar[float] = 1.0
@@ -114,28 +129,38 @@ class EurlexAdapter(SourceAdapter):
 
     @override
     def fetch(self, law_id: str) -> Law:
-        """Fetch one CELEX resource's RDF metadata as a :class:`Law`."""
+        """Fetch one CELEX resource's RDF metadata as a :class:`Law`.
+
+        CELLAR's ``lastModificationDate`` is the metadata record's own
+        timestamp — a re-ingest moves it without any amendment — so it
+        must not pose as an amendment date. ``last_amended`` therefore
+        stays ``None`` (CELLAR's metadata graph states no per-act
+        amendment date); ``consolidated_as_of`` carries the record's
+        last-modification day as the as-of date of the served text.
+        """
         celex = law_id.strip()
         url = f"{_BASE}/{urllib.parse.quote(celex)}"
         body = self._get(url)
         root = parse_xml(body, f"CELLAR returned malformed RDF for {celex!r}")
         facts = _scan_descriptions(root)
         title = facts.title or facts.title_short or celex
-        extras = [("celex", celex)]
+        extras = {"celex": celex}
         if facts.resource_type is not None:
-            extras.append(("resource_type", facts.resource_type))
+            extras["resource_type"] = facts.resource_type
         if facts.title_short is not None:
-            extras.append(("title_short", facts.title_short))
+            extras["title_short"] = facts.title_short
         return Law(
             source=self.source_id,
             jurisdiction=self.jurisdiction,
+            channel=self.channel,
             law_id=celex,
             title=title,
             url=f"https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:{celex}",
             language=facts.language,
-            modified=facts.modified or facts.created,
+            last_amended=None,
+            consolidated_as_of=_iso_day(facts.last_modified),
             text_url=url,
-            extras=tuple(extras),
+            extras=extras,
         )
 
     @override

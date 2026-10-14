@@ -25,12 +25,13 @@ def test_fetch_parses_cellar_rdf(offline: Offline, recording_site: RecordingSite
     assert law.law_id == "32022R2065"
     assert "Digital Services Act" in law.title
     assert law.language == "ENG"
-    assert law.modified is not None
+    assert law.last_amended is None
+    assert law.consolidated_as_of == "2023-12-13"
     assert law.url == "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2065"
     assert law.text_url == _CELEX_URL
-    assert ("celex", "32022R2065") in law.extras
-    assert ("resource_type", "expression") in law.extras
-    assert ("title_short", "DSA, Digital Services Act, DSA Regulation") in law.extras
+    assert law.extras["celex"] == "32022R2065"
+    assert law.extras["resource_type"] == "expression"
+    assert law.extras["title_short"] == "DSA, Digital Services Act, DSA Regulation"
     assert seen == ["https://publications.europa.eu/robots.txt", _CELEX_URL]
 
 
@@ -48,7 +49,7 @@ def test_fetch_without_titles_falls_back_to_celex(offline: Offline, recording_si
     adapter = offline(EurlexAdapter, recording_site({"/resource/celex/32022R2065": bare}, []))
     law = adapter.fetch("32022R2065")
     assert law.title == "32022R2065"
-    assert law.extras == (("celex", "32022R2065"),)
+    assert law.extras == {"celex": "32022R2065"}
 
 
 def test_search_points_at_sparql(offline: Offline, recording_site: RecordingSite) -> None:

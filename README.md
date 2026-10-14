@@ -69,7 +69,7 @@ print(law.title, law.akn_url)
 `uk` (legislation.gov.uk XML + native Akoma Ntoso), `jp` (e-Gov 法令),
 `jlt` (Japanese Law Translation, official English TMX), `kr`
 (국가법령정보센터 DRF, key-gated), `eu` (Publications Office CELLAR by
-CELEX), `us` (eCFR — US federal regulations), `us-tx` (Texas Constitution
+CELEX), `us-ecfr` (eCFR — US federal regulations), `us-tx` (Texas Constitution
 and Statutes), `ca` (Justice Laws Website), `de` (Gesetze im Internet),
 `bd` (bdlaws), `np` (Nepal Law Commission), `la` (Lao Official Gazette,
 PDF full texts) and `mv` (mvlaw — Maldives AGO). Adding a jurisdiction is

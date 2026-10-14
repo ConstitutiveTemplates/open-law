@@ -43,6 +43,9 @@ class SourceAdapter(ABC):
     - ``source_id``: short id the CLI and the registry know
       (``"uk"``, ``"jp"``).
     - ``jurisdiction``: ISO 3166-1 alpha-2 code or ``"EU"``.
+    - ``channel``: what the channel publishes, one of
+      :data:`open_law.models.CHANNELS` (``"translation"`` for JLT's
+      English versions of Japanese law).
     - ``crawl_delay_seconds``: per-host delay; raise it above the default
       when the source's robots.txt asks for a Crawl-delay (as
       legislation.gov.uk does with 5).
@@ -56,6 +59,7 @@ class SourceAdapter(ABC):
     source_id: ClassVar[str]
     name: ClassVar[str]
     jurisdiction: ClassVar[str]
+    channel: ClassVar[str]
     homepage: ClassVar[str]
     license_note: ClassVar[str]
     crawl_delay_seconds: ClassVar[float] = 1.0

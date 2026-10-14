@@ -58,14 +58,14 @@ def as_dict_list(value: object) -> list[dict[str, object]]:
     return [cast("dict[str, object]", entry) for entry in cast("list[object]", value) if isinstance(entry, dict)]
 
 
-def pairs(candidates: tuple[tuple[str, object], ...]) -> tuple[tuple[str, str], ...]:
-    """(key, value) pairs for the non-None *candidates*, stringified."""
-    kept: list[tuple[str, str]] = []
+def pairs(candidates: tuple[tuple[str, object], ...]) -> dict[str, str]:
+    """Extras dict of the non-empty *candidates*, values stringified."""
+    kept: dict[str, str] = {}
     for key, value in candidates:
         text = as_str(value)
         if text is not None:
-            kept.append((key, text))
-    return tuple(kept)
+            kept[key] = text
+    return kept
 
 
 def clamp_limit(limit: int) -> int:

@@ -34,7 +34,7 @@ def cmd_sources() -> None:
     """Print the adapter registry as one line per source."""
     for _source_id, adapter_cls in sorted(ADAPTERS.items()):
         print(
-            f"{adapter_cls.source_id}\t{adapter_cls.jurisdiction}\t"
+            f"{adapter_cls.source_id}\t{adapter_cls.jurisdiction}\t{adapter_cls.channel}\t"
             f"{adapter_cls.name}\t{adapter_cls.homepage}\t{adapter_cls.license_note}"
         )
 

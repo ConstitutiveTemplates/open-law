@@ -59,6 +59,7 @@ class TexasStatutesAdapter(SourceAdapter):
     source_id: ClassVar[str] = "us-tx"
     name: ClassVar[str] = "Texas Constitution and Statutes (Texas Legislature)"
     jurisdiction: ClassVar[str] = "US-TX"
+    channel: ClassVar[str] = "statutes"
     homepage: ClassVar[str] = "https://statutes.capitol.texas.gov"
     license_note: ClassVar[str] = "Texas government work — public information (Texas Public Information Act)"
     crawl_delay_seconds: ClassVar[float] = 2.0
@@ -88,10 +89,11 @@ class TexasStatutesAdapter(SourceAdapter):
                 LawSummary(
                     source=self.source_id,
                     jurisdiction=self.jurisdiction,
+                    channel=self.channel,
                     law_id=law_id,
                     title=title.strip(),
                     url=f"{_SITE}/Docs/{match.group(1)}/htm/{law_id}.htm",
-                    extras=(("document_code", str(row.get("DocumentCode", match.group(1)))),),
+                    extras={"document_code": str(row.get("DocumentCode", match.group(1)))},
                 )
             )
             if len(summaries) >= size:
@@ -121,10 +123,11 @@ class TexasStatutesAdapter(SourceAdapter):
         return Law(
             source=self.source_id,
             jurisdiction=self.jurisdiction,
+            channel=self.channel,
             law_id=law_key,
             title=title or law_key,
             url=url,
             language="eng",
             text_url=text_url,
-            extras=(("format", "tcas-html"), ("code", code), ("chapter", chapter)),
+            extras={"format": "tcas-html", "code": code, "chapter": chapter},
         )

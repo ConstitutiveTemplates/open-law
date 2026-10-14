@@ -50,6 +50,7 @@ class KoreaLawAdapter(SourceAdapter):
     source_id: ClassVar[str] = "kr"
     name: ClassVar[str] = "국가법령정보센터 (Ministry of Government Legislation)"
     jurisdiction: ClassVar[str] = "KR"
+    channel: ClassVar[str] = "legislation"
     homepage: ClassVar[str] = "https://www.law.go.kr"
     license_note: ClassVar[str] = "공공누리 (KOGL, attribution)"
     crawl_delay_seconds: ClassVar[float] = 1.0
@@ -75,13 +76,17 @@ class KoreaLawAdapter(SourceAdapter):
             if law_id is None or title is None:
                 continue
             promulgation_raw = xml_child_text(entry, "공포일자")
-            extras = tuple((key, text) for tag, key in _EXTRAS_TAGS if (text := xml_child_text(entry, tag)) is not None)
+            extras: dict[str, str] = {}
             if promulgation_raw is not None:
-                extras = (("promulgation_date_raw", promulgation_raw), *extras)
+                extras["promulgation_date_raw"] = promulgation_raw
+            extras.update(
+                (key, text) for tag, key in _EXTRAS_TAGS if (text := xml_child_text(entry, tag)) is not None
+            )
             summaries.append(
                 LawSummary(
                     source=self.source_id,
                     jurisdiction=self.jurisdiction,
+                    channel=self.channel,
                     law_id=law_id,
                     title=title,
                     promulgation_date=to_iso_date(promulgation_raw),

@@ -24,7 +24,7 @@ def test_search_finds_biometric_chapter(
     assert cubi.jurisdiction == "US-TX"
     assert cubi.title == "BUSINESS AND COMMERCE CODE CHAPTER 503. BIOMETRIC IDENTIFIERS"
     assert cubi.url == "https://statutes.capitol.texas.gov/Docs/BC/htm/BC.503.htm"
-    assert ("document_code", "BC") in cubi.extras
+    assert cubi.extras["document_code"] == "BC"
     assert "https://tcss.legis.texas.gov/api/TCASSearch/GetPage/1/ZZ/biometric" in seen
 
 
@@ -67,8 +67,8 @@ def test_fetch_returns_chapter_with_file_text_url(
     assert law.title == "BUSINESS AND COMMERCE CODE  CHAPTER 503.  BIOMETRIC IDENTIFIERS"
     assert law.language == "eng"
     assert law.text_url == "https://tcss.legis.texas.gov/resources/BC/htm/BC.503.htm"
-    assert ("format", "tcas-html") in law.extras
-    assert ("chapter", "503") in law.extras
+    assert law.extras["format"] == "tcas-html"
+    assert law.extras["chapter"] == "503"
     assert seen == [
         "https://tcss.legis.texas.gov/robots.txt",
         "https://tcss.legis.texas.gov/resources/BC/htm/BC.503.htm",

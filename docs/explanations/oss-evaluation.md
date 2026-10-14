@@ -21,7 +21,7 @@ license metadata in September 2026; re-verify before reversing one.
 | JLT database (japaneselawtranslation.go.jp) | PDL 1.0 + MoJ © | **Used** (`jlt` adapter; TMX bilingual download per law, search CSRF-gated → fetch-by-id only) |
 | law.go.kr DRF Open API | KOGL (attribution) | **Used** (`kr` adapter, key-gated via `LAW_KR_OC`) |
 | EU CELLAR | Decision 2011/833/EU | **Used** (`eu` adapter) |
-| eCFR public API | US public domain (17 USC §105) | **Used** (`us` adapter; govinfo key-gated, uscode.house.gov bot-gated — eCFR is the key-free regulatory channel) |
+| eCFR public API | US public domain (17 USC §105) | **Used** (`us-ecfr` adapter; govinfo key-gated, uscode.house.gov bot-gated — eCFR is the key-free regulatory channel) |
 | Justice Laws Website XML | Crown copyright (non-commercial reproduction) | **Used** (`ca` adapter; legacy search has no machine endpoint, fetch-by-code only) |
 
 Per-country channel status across Asia (robots verdicts, bot walls,
@@ -69,9 +69,9 @@ Verified dead while probing; recorded so nobody rebuilds on them:
   returns 404. Brazilian legislation needs a new channel before any
   `br` adapter is attempted.
 - **eCFR human search UI** (`/search`) — robots.txt `Disallow`; the
-  `/api/` tree is explicitly open, so the `us` adapter uses the API only.
+  `/api/` tree is explicitly open, so the `us-ecfr` adapter uses the API only.
 - **govinfo api.data.gov without a key** — `DEMO_KEY` is rate-limited
-  in probing (429s); usable only with a registered key, so the `us`
+  in probing (429s); usable only with a registered key, so the `us-ecfr`
   adapter does not depend on it.
 - **uscode.house.gov** — bot-gated / under maintenance during probing
   (2026-10); statutes stay out of scope until the channel stabilises.

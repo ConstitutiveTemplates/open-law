@@ -49,6 +49,7 @@ class JltAdapter(SourceAdapter):
     source_id: ClassVar[str] = "jlt"
     name: ClassVar[str] = "Japanese Law Translation (Ministry of Justice)"
     jurisdiction: ClassVar[str] = "JP"
+    channel: ClassVar[str] = "translation"
     homepage: ClassVar[str] = "https://www.japaneselawtranslation.go.jp"
     license_note: ClassVar[str] = (
         "Public Data License 1.0 (terms at /en/index/terms) — "
@@ -94,22 +95,22 @@ class JltAdapter(SourceAdapter):
         tmx = _TMX_RE.search(body)
         pdf = _PDF_RE.search(body)
         txt = _TXT_RE.search(body)
-        extras: list[tuple[str, str]] = [("format", "jlt-tmx")]
+        extras = {"format": "jlt-tmx"}
         if pdf:
-            extras.append(("pdf_url", f"{_BASE}/en/laws/{pdf.group(0)}"))
+            extras["pdf_url"] = f"{_BASE}/en/laws/{pdf.group(0)}"
         if txt:
-            extras.append(("txt_url", f"{_BASE}/en/laws/{txt.group(0)}"))
+            extras["txt_url"] = f"{_BASE}/en/laws/{txt.group(0)}"
         if not tmx:
             msg = f"JLT page for {lid} has no TMX download (older translation?)"
             raise NotAvailableBySourceError(msg)
         return Law(
             source=self.source_id,
             jurisdiction=self.jurisdiction,
+            channel=self.channel,
             law_id=lid,
             title=title or lid,
             url=view_url,
             language="eng",
-            modified=None,  # TMX carries creationdate inside; page has no field
             text_url=f"{_BASE}/en/laws/{tmx.group(0)}",
-            extras=tuple(extras),
+            extras=extras,
         )

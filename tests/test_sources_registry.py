@@ -14,7 +14,7 @@ from open_law.sources.uk import LegislationGovUkAdapter
 
 def test_adapter_ids_are_unique() -> None:
     assert len(set(ADAPTERS)) == len(ADAPTERS)
-    assert set(ADAPTERS) == {"uk", "jp", "kr", "la", "bd", "np", "mv", "eu", "us", "ca", "jlt", "de", "us-tx"}
+    assert set(ADAPTERS) == {"uk", "jp", "kr", "la", "bd", "np", "mv", "eu", "us-ecfr", "ca", "jlt", "de", "us-tx"}
 
 
 def test_open_adapter_builds_every_registered_source() -> None:
@@ -39,5 +39,5 @@ def test_open_adapter_injects_custom_fetcher(tmp_path: Path) -> None:
 
 
 def test_open_adapter_unknown_source_lists_known() -> None:
-    with pytest.raises(ValueError, match="known sources: bd, ca, de, eu, jlt, jp, kr, la, mv, np, uk, us, us-tx"):
+    with pytest.raises(ValueError, match="known sources: bd, ca, de, eu, jlt, jp, kr, la, mv, np, uk, us-ecfr, us-tx"):
         open_adapter("mars")

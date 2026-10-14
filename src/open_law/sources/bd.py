@@ -50,6 +50,7 @@ class BangladeshLawsAdapter(SourceAdapter):
     source_id: ClassVar[str] = "bd"
     name: ClassVar[str] = "bdlaws (Ministry of Law, Justice and Parliamentary Affairs)"
     jurisdiction: ClassVar[str] = "BD"
+    channel: ClassVar[str] = "statutes"
     homepage: ClassVar[str] = "https://bdlaws.minlaw.gov.bd"
     license_note: ClassVar[str] = "Government of Bangladesh publication (no explicit reuse licence)"
     crawl_delay_seconds: ClassVar[float] = 2.0
@@ -68,20 +69,21 @@ class BangladeshLawsAdapter(SourceAdapter):
         preamble_match = _PREAMBLE_RE.search(body)
         preamble = preamble_match.group(1).strip() if preamble_match else ""
         year_match = _YEAR_RE.search(title)
-        extras = [("act_number", number)]
+        extras = {"act_number": number}
         if preamble:
-            extras.append(("preamble", preamble))
+            extras["preamble"] = preamble
         if year_match:
-            extras.append(("year", year_match.group(1)))
+            extras["year"] = year_match.group(1)
         return Law(
             source=self.source_id,
             jurisdiction=self.jurisdiction,
+            channel=self.channel,
             law_id=number,
             title=title,
             url=url,
             language="en",
             text_url=url,
-            extras=tuple(extras),
+            extras=extras,
         )
 
     @override

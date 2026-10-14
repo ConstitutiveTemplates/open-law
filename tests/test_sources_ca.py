@@ -36,12 +36,12 @@ def test_fetch_pipeda_returns_short_title(
     assert law.law_id == "P-8.6"
     assert law.title == "Personal Information Protection and Electronic Documents Act"
     assert law.language == "eng"
-    assert law.modified == "2026-03-26"
+    assert law.last_amended == "2025-03-04"
+    assert law.consolidated_as_of == "2026-03-26"
     assert law.url == "https://laws-lois.justice.gc.ca/eng/acts/P-8.6/"
     assert law.text_url == _XML_URL
-    assert ("format", "justice-xml") in law.extras
-    assert ("in_force", "yes") in law.extras
-    assert ("last_amended", "2025-03-04") in law.extras
+    assert law.extras["format"] == "justice-xml"
+    assert law.extras["in_force"] == "yes"
     assert seen == ["https://laws-lois.justice.gc.ca/robots.txt", _XML_URL]
 
 
@@ -69,7 +69,8 @@ def test_fetch_without_titles_falls_back_to_code(offline: Offline, recording_sit
     adapter = offline(JusticeLawsAdapter, recording_site({"/eng/XML/C-46.xml": bare}, []))
     law = adapter.fetch("C-46")
     assert law.title == "C-46"
-    assert law.modified == "2026-01-01"
+    assert law.last_amended is None
+    assert law.consolidated_as_of == "2026-01-01"
 
 
 def test_search_points_at_acts_index(offline: Offline, recording_site: RecordingSite) -> None:

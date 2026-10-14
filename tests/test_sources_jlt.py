@@ -38,11 +38,11 @@ def test_fetch_lsa_returns_official_translation(
     assert law.language == "eng"
     assert law.url == _VIEW_URL
     assert law.text_url == _TMX_URL
-    assert ("format", "jlt-tmx") in law.extras
+    assert law.extras["format"] == "jlt-tmx"
     assert (
-        "pdf_url",
-        "https://www.japaneselawtranslation.go.jp/en/laws/download/4913/14/s22Aa000490404je17.0_r2A13.pdf",
-    ) in law.extras
+        law.extras["pdf_url"]
+        == "https://www.japaneselawtranslation.go.jp/en/laws/download/4913/14/s22Aa000490404je17.0_r2A13.pdf"
+    )
     assert seen == ["https://www.japaneselawtranslation.go.jp/robots.txt", _VIEW_URL]
 
 

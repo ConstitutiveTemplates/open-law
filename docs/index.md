@@ -23,7 +23,7 @@ Built-in sources (`open-law sources` prints the live registry):
 | `mv` | Maldives | mvlaw (Attorney General's Office) |
 | `np` | Nepal | Nepal Law Commission |
 | `uk` | United Kingdom | legislation.gov.uk, XML + native Akoma Ntoso |
-| `us` | United States | eCFR — Code of Federal Regulations |
+| `us-ecfr` | United States | eCFR — Code of Federal Regulations (regulations only) |
 | `us-tx` | Texas (US) | Texas Constitution and Statutes (Texas Legislature) |
 
 For the rest of Asia, the

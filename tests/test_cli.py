@@ -29,9 +29,11 @@ def test_cli_version() -> None:
 def test_sources_lists_registered_adapters(capsys: pytest.CaptureFixture[str]) -> None:
     cli.main(["sources"])
     out = capsys.readouterr().out
-    assert "uk\tGB\tlegislation.gov.uk (The National Archives)" in out
-    assert "jp\tJP\te-Gov 法令検索 (Digital Agency)" in out
-    assert "eu\tEU\t" in out
+    assert "uk\tGB\tlegislation\tlegislation.gov.uk (The National Archives)" in out
+    assert "jp\tJP\tlegislation\te-Gov 法令検索 (Digital Agency)" in out
+    assert "eu\tEU\tlegislation\t" in out
+    assert "jlt\tJP\ttranslation\t" in out
+    assert "us-ecfr\tUS\tregulations\t" in out
     assert "Open Government Licence v3.0" in out
 
 
@@ -65,7 +67,7 @@ def test_unknown_source_exits_with_error(capsys: pytest.CaptureFixture[str]) -> 
     with pytest.raises(SystemExit) as excinfo:
         cli.main(["fetch", "mars", "x"])
     assert excinfo.value.code == 2
-    assert "known sources: bd, ca, de, eu, jlt, jp, kr, la, mv, np, uk, us, us-tx" in capsys.readouterr().err
+    assert "known sources: bd, ca, de, eu, jlt, jp, kr, la, mv, np, uk, us-ecfr, us-tx" in capsys.readouterr().err
 
 
 def test_text_command_prints_plain_text(
@@ -362,6 +364,7 @@ def test_fetch_wayback_flag_falls_back_on_network_failure(tmp_path, capsys) -> N
         source_id = "fakestub"
         name = "Fake"
         jurisdiction = "XX"
+        channel = "legislation"
         homepage = "https://example.com"
         license_note = "test"
 
@@ -374,6 +377,7 @@ def test_fetch_wayback_flag_falls_back_on_network_failure(tmp_path, capsys) -> N
             return Law(
                 source=self.source_id,
                 jurisdiction=self.jurisdiction,
+                channel=self.channel,
                 law_id=law_id,
                 title=body.strip(),
                 url=f"https://example.com/law/{law_id}",
@@ -451,6 +455,7 @@ def test_text_command_wayback_reports_snapshot(tmp_path, capsys) -> None:
         source_id = "fakestub2"
         name = "Fake"
         jurisdiction = "XX"
+        channel = "legislation"
         homepage = "https://example.com"
         license_note = "test"
 
@@ -461,6 +466,7 @@ def test_text_command_wayback_reports_snapshot(tmp_path, capsys) -> None:
             return Law(
                 source=self.source_id,
                 jurisdiction=self.jurisdiction,
+                channel=self.channel,
                 law_id=law_id,
                 title="t",
                 url="https://example.com/law/1",

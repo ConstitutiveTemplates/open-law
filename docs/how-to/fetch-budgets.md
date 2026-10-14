@@ -40,7 +40,7 @@ unless the site is known-slow or known-large.
 | `eu`   | EurlexAdapter | 1.0 | 100 | 10 | 86400 |
 | `jp`   | EgovAdapter | 1.0 | 100 | 10 | 86400 |
 | `kr`   | KoreaLawAdapter | 1.0 | 100 | 10 | 86400 |
-| `us`   | EcfrAdapter | 1.0 | 100 | 10 | 86400 |
+| `us-ecfr` | EcfrAdapter | 1.0 | 100 | 10 | 86400 |
 | `jlt`  | JltAdapter | 2.0 | 100 | 10 | 86400 |
 
 > `np` mirrors the server's `Crawl-delay: 10`; `la` has no robots.txt, so 2 s
@@ -52,11 +52,11 @@ Example — a 10 s fetcher for Nepal, a 1 s fetcher for eCFR:
 ```python
 from open_law.fetcher import FetchConfig, PoliteFetcher
 from open_law.sources.np import NepalLawCommissionAdapter
-from open_law.sources.us import EcfrAdapter
+from open_law.sources.us_ecfr import EcfrAdapter
 from open_law.sources import open_adapter
 
 np_adapter = open_adapter("np", fetcher=PoliteFetcher(FetchConfig(delay_seconds=NepalLawCommissionAdapter.crawl_delay_seconds)))
-us_adapter = open_adapter("us")  # default_fetcher already uses EcfrAdapter.crawl_delay_seconds
+us_adapter = open_adapter("us-ecfr")  # default_fetcher already uses EcfrAdapter.crawl_delay_seconds
 ```
 
 ## Bulk-dump math

@@ -29,9 +29,9 @@ def test_search_parses_law_list_json(
     assert first.title == "日本勧業銀行法等を廃止する法律"
     assert first.promulgation_date == "1950-03-31"
     assert first.url == "https://laws.e-gov.go.jp/document?law_id=325AC0000000041"
-    assert ("law_num", "昭和二十五年法律第四十一号") in first.extras
-    assert ("law_title_kana", "にほんかんぎょうぎんこうほうとうをはいしするほうりつ") in first.extras
-    assert ("category", "金融・保険") in first.extras
+    assert first.extras["law_num"] == "昭和二十五年法律第四十一号"
+    assert first.extras["law_title_kana"] == "にほんかんぎょうぎんこうほうとうをはいしするほうりつ"
+    assert first.extras["category"] == "金融・保険"
     assert f"{_LAWS_URL}?law_title=%E9%8A%80%E8%A1%8C%E6%B3%95&limit=10" in seen
 
 
@@ -71,7 +71,7 @@ def test_search_skips_unusable_entries(offline: Offline, recording_site: Recordi
     assert len(results) == 1
     assert results[0].law_id == "1"
     assert results[0].title == "数字だけの法令"
-    assert results[0].extras == (("law_num", "第一条"),)
+    assert results[0].extras == {"law_num": "第一条"}
 
 
 def test_search_without_laws_field_returns_empty(offline: Offline, recording_site: RecordingSite) -> None:
@@ -85,7 +85,13 @@ def test_fetch_parses_v1_lawdata_without_registration(
     seen: list[str] = []
     adapter = offline(
         EgovAdapter,
-        recording_site({"/api/1/lawdata/325AC0000000041": fixture_text("egov_lawdata_325AC0000000041.xml")}, seen),
+        recording_site(
+            {
+                "/api/1/lawdata/325AC0000000041": fixture_text("egov_lawdata_325AC0000000041.xml"),
+                "/api/2/laws": fixture_text("egov_search_bankin.json"),
+            },
+            seen,
+        ),
     )
     law = adapter.fetch("325AC0000000041")
     assert law.source == "jp"
@@ -93,16 +99,21 @@ def test_fetch_parses_v1_lawdata_without_registration(
     assert law.law_id == "325AC0000000041"
     assert law.title == "日本勧業銀行法等を廃止する法律"
     assert law.promulgation_date == "1950-03-31"
-    assert law.modified == "1950-03-31"
+    # The v2 revision_info stamps the enactment's own date as its
+    # "amendment" — never amended, so last_amended is None, never a date
+    # equal to promulgation. consolidated_as_of is the v2 enforcement date.
+    assert law.last_amended is None
+    assert law.consolidated_as_of == "1950-03-31"
     assert law.url == "https://laws.e-gov.go.jp/document?law_id=325AC0000000041"
     assert law.language == "jpn"
     assert law.text_url == "https://laws.e-gov.go.jp/api/1/lawdata/325AC0000000041"
-    assert ("format", "egov-law-xml") in law.extras
-    assert ("law_type", "Act") in law.extras
-    assert ("era", "Showa") in law.extras
+    assert law.extras["format"] == "egov-law-xml"
+    assert law.extras["law_type"] == "Act"
+    assert law.extras["era"] == "Showa"
     assert seen == [
         "https://laws.e-gov.go.jp/robots.txt",
         "https://laws.e-gov.go.jp/api/1/lawdata/325AC0000000041",
+        "https://laws.e-gov.go.jp/api/2/laws?law_id=325AC0000000041&limit=1",
     ]
 
 

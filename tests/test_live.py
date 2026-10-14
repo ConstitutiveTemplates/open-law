@@ -27,7 +27,7 @@ _LIVE_IDS: dict[str, str] = {
     "la": "2143",
     "mv": "291",
     "uk": "ukcm/2023/1",
-    "us": "title-16/part-312/section-312.5",
+    "us-ecfr": "title-16/part-312/section-312.5",
     "us-tx": "BC.503",
 }
 

@@ -47,12 +47,12 @@ def test_search_parses_documented_xml(
     assert first.law_id == "001653"
     assert first.title == "은행법"
     assert first.promulgation_date == "2025-03-18"
-    assert ("promulgation_date_raw", "20250318") in first.extras
+    assert first.extras["promulgation_date_raw"] == "20250318"
     assert first.url == "https://law.go.kr/LSW/lawInfo.do?법령ID=001653"
     # The empty 약칭명 tag yields no extras; the filled one does.
-    assert ("abbreviation", "은행법시행령") in results[1].extras
-    assert ("category", "대통령령") in results[1].extras
-    assert first.extras != () and results[2].title == "English-named entry"
+    assert results[1].extras["abbreviation"] == "은행법시행령"
+    assert results[1].extras["category"] == "대통령령"
+    assert first.extras != {} and results[2].title == "English-named entry"
     requested = [url for url in seen if "lawSearch.do" in url]
     assert requested == [(f"{_LAWS_URL}?target=law&type=XML&query=%EC%9D%80%ED%96%89%EB%B2%95&OC=testkey")]
 

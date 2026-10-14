@@ -52,6 +52,7 @@ class GesetzeImInternetAdapter(SourceAdapter):
     source_id: ClassVar[str] = "de"
     name: ClassVar[str] = "Gesetze im Internet (BMJ/BfJ)"
     jurisdiction: ClassVar[str] = "DE"
+    channel: ClassVar[str] = "legislation"
     homepage: ClassVar[str] = "https://www.gesetze-im-internet.de"
     license_note: ClassVar[str] = (
         "Gesetze im Internet — federal statutes; official publication, no additional licence terms stated"
@@ -87,10 +88,11 @@ class GesetzeImInternetAdapter(SourceAdapter):
                 LawSummary(
                     source=self.source_id,
                     jurisdiction=self.jurisdiction,
+                    channel=self.channel,
                     law_id=folder,
                     title=title or abbrev_clean,
                     url=f"{_BASE}/{folder}/index.html",
-                    extras=(("abbrev", abbrev_clean), ("full_title", full_clean)),
+                    extras={"abbrev": abbrev_clean, "full_title": full_clean},
                 )
             )
             if len(summaries) >= size:
@@ -123,10 +125,11 @@ class GesetzeImInternetAdapter(SourceAdapter):
         return Law(
             source=self.source_id,
             jurisdiction=self.jurisdiction,
+            channel=self.channel,
             law_id=folder,
             title=title or folder,
             url=index_url,
             language="deu",
             text_url=text_url,
-            extras=(("abbrev", abbrev or folder.upper()), ("format", "gii-html")),
+            extras={"abbrev": abbrev or folder.upper(), "format": "gii-html"},
         )

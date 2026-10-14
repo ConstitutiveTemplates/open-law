@@ -52,6 +52,7 @@ class NepalLawCommissionAdapter(SourceAdapter):
     source_id: ClassVar[str] = "np"
     name: ClassVar[str] = "Nepal Law Commission"
     jurisdiction: ClassVar[str] = "NP"
+    channel: ClassVar[str] = "legislation"
     homepage: ClassVar[str] = "https://lawcommission.gov.np"
     license_note: ClassVar[str] = "Nepal Law Commission publication"
     crawl_delay_seconds: ClassVar[float] = 10.0
@@ -74,11 +75,12 @@ class NepalLawCommissionAdapter(SourceAdapter):
         return Law(
             source=self.source_id,
             jurisdiction=self.jurisdiction,
+            channel=self.channel,
             law_id=number,
             title=h1 or title,
             url=url,
             text_url=url,
-            extras=(("content_id", number),),
+            extras={"content_id": number},
         )
 
     @override

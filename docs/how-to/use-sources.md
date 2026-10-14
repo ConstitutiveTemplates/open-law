@@ -4,6 +4,16 @@ open-law ships one adapter per jurisdiction, each wrapping that
 country's *official* publication channel — an API or a bulk data
 endpoint, never a scraped HTML page when a machine channel exists.
 
+The examples run from a clone with `uv run`; after
+`uv tool install` (see [Installation](../tutorials/installation.md)),
+drop the `uv run` prefix. Live commands need a reachable contact
+address first — the fetcher refuses to send requests under the
+`contact@example.com` placeholder:
+
+```console
+$ export FETCHER_CONTACT=you@example.org
+```
+
 ## The source registry
 
 ```console
@@ -35,12 +45,7 @@ is only required for the newer v2 document endpoints, which open-law
 does not use). Korea still needs its key: `search kr` activates once
 the ``LAW_KR_OC`` open-API id (issued at openapi.law.go.kr, bound to
 your server IP — without it the API answers "required-input
-verification failed") is set in the environment. The `jp` law_ids that the
-e-Gov list returns are exactly what the orimono ecosystem's JLT legal
-corpus (`datasets/legal/`, five statutes incl. the 2,730-pair Civil Code
-split) scores against — the official MoJ English translations there are
-the reference side for `reference-eval.py`, while open-law supplies the
-Japanese-side identity and metadata for the same statutes.
+verification failed") is set in the environment.
 
 ```console
 # US federal regulations (eCFR — no key, structured XML)
@@ -79,8 +84,7 @@ translations: `fetch` resolves the law's view page and returns the TMX
 pairs — with PDF/TXT alternates in `extras`. Keyword search is
 CSRF-gated to machines, so `search` declines; the per-law ids come from
 the human index. This is the *English* side of the same statute book
-`jp` (e-Gov) indexes in Japanese — the bridge orimono's legal corpus
-evaluates against.
+`jp` (e-Gov) indexes in Japanese.
 
 ```console
 # Germany's federal statutes (Gesetze im Internet — no key, static index + HTML)
@@ -124,6 +128,7 @@ latest consolidation page, whose embedded section tree is the full
 text. The `/api/v1/` JSON router the site bundles advertise answers
 401 without a session, so the adapter reads the server-rendered pages
 instead. Content language is Dhivehi (`div`).
+
 ## Read the full text
 
 ```console
@@ -134,7 +139,9 @@ $ uv run open-law text uk ukpga/1989/6 | head -40
 `text` refetches the law's `text_url` through the polite fetcher (the
 on-disk cache makes it free right after a `fetch`) and strips it to
 plain text: XML sources extract character data, HTML pages strip tags.
-Sources whose full text is a PDF (Laos) refuse and point at the file.
+Sources whose full text is a PDF (Laos) are extracted with `pypdf` when
+the `pdf` extra is installed; without it, `text` refuses and points at
+the file. Scanned PDFs without a text layer come back empty.
 
 Search results and fetched laws carry ISO-8601 `promulgation_date`
 values; the source's original spelling is preserved in `extras`
@@ -169,7 +176,11 @@ $ uv run open-law preflight https://example.com/feed
 ```
 
 prints the fetcher's judgement as JSON: feed/API discovery, robots.txt
-verdict, and per-host budget state — the tool the charter runs before
+verdict, and per-host budget state — the check the charter asks for
+before crawling a new site. It is not free: it reads robots.txt first,
+then sends a HEAD to the URL and probes the feed and API endpoints, all
+rate-limited and counted toward the host budget.
+
 ## Politeness is per source
 
 Each adapter class declares its own `crawl_delay_seconds` (mirroring

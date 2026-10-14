@@ -26,6 +26,10 @@ jobs:
       # secret is unset the kr probe is skipped (and recorded as skipped in
       # the report so the gap stays visible instead of silent).
       LAW_KR_OC: ${{ secrets.LAW_KR_OC }}
+      # The fetcher refuses live requests under the placeholder contact, so
+      # every probe fails until the FETCHER_CONTACT repository variable holds
+      # an address the probed sites' operators can reach.
+      FETCHER_CONTACT: ${{ vars.FETCHER_CONTACT }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

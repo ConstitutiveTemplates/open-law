@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import sys
 from collections.abc import Iterable
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -47,32 +48,48 @@ class CorpusEntry:
 
 
 def iter_corpus(jsonl_lines: Iterable[str]) -> Iterator[CorpusEntry]:
-    """Parse dumped JSONL lines, tolerating corrupt or foreign lines."""
+    """Parse dumped JSONL lines, tolerating corrupt or foreign lines.
+
+    Skipped lines are not silent: once the input is exhausted, their count
+    goes to stderr so a damaged corpus does not pass for a small one.
+    """
+    skipped = 0
     for raw_line in jsonl_lines:
         line = raw_line.strip()
         if not line:
             continue
-        try:
-            decoded = cast("object", json.loads(line))
-        except json.JSONDecodeError:
+        entry = _parse_corpus_line(line)
+        if entry is None:
+            skipped += 1
             continue
-        if not isinstance(decoded, dict):
-            continue
-        entry = cast("dict[str, object]", decoded)
-        jurisdiction = entry.get("jurisdiction")
-        title = entry.get("title")
-        if not isinstance(jurisdiction, str) or not isinstance(title, str):
-            continue
-        source = entry.get("source")
-        law_id = entry.get("law_id")
-        promulgation_date = entry.get("promulgation_date")
-        yield CorpusEntry(
-            source=source if isinstance(source, str) else "",
-            law_id=law_id if isinstance(law_id, str) else "",
-            jurisdiction=jurisdiction,
-            title=title,
-            promulgation_date=promulgation_date if isinstance(promulgation_date, str) else None,
-        )
+        yield entry
+    if skipped:
+        print(f"open-law: skipped {skipped} malformed or non-law corpus line(s)", file=sys.stderr)
+
+
+def _parse_corpus_line(line: str) -> CorpusEntry | None:
+    """One dumped law line as a :class:`CorpusEntry`, or None when unusable."""
+    try:
+        decoded = cast("object", json.loads(line))
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(decoded, dict):
+        return None
+    entry = cast("dict[str, object]", decoded)
+    jurisdiction = entry.get("jurisdiction")
+    title = entry.get("title")
+    if not isinstance(jurisdiction, str) or not isinstance(title, str):
+        return None
+    source = entry.get("source")
+    law_id = entry.get("law_id")
+    promulgation_date = entry.get("promulgation_date")
+    return CorpusEntry(
+        source=source if isinstance(source, str) else "",
+        law_id=law_id if isinstance(law_id, str) else "",
+        jurisdiction=jurisdiction,
+        title=title,
+        promulgation_date=promulgation_date if isinstance(promulgation_date, str) else None,
+    )
 
 
 def load_annotations(path: str) -> dict[str, tuple[str, ...]]:

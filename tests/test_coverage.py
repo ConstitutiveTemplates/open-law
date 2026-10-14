@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from open_law.coverage import coverage_matrix
 from open_law.coverage import gap_report
 from open_law.topics import DEFAULT_TOPICS
@@ -30,7 +32,7 @@ def test_matrix_counts_laws_per_jurisdiction_and_topic() -> None:
     assert "energy" in matrix.missing_topics("JP", DEFAULT_TOPICS)
 
 
-def test_matrix_skips_malformed_and_foreign_lines() -> None:
+def test_matrix_skips_malformed_and_foreign_lines(capsys: pytest.CaptureFixture[str]) -> None:
     lines = [
         "not json",
         json.dumps(["a", "list"]),
@@ -41,6 +43,12 @@ def test_matrix_skips_malformed_and_foreign_lines() -> None:
     matrix = coverage_matrix(lines, DEFAULT_TOPICS)
     assert matrix.jurisdictions == ("JP",)
     assert matrix.counts[("JP", "labor")] == 1
+    assert "skipped 3 malformed or non-law corpus line(s)" in capsys.readouterr().err
+
+
+def test_clean_corpus_reports_nothing(capsys: pytest.CaptureFixture[str]) -> None:
+    coverage_matrix([_line("JP", "労働基準法")], DEFAULT_TOPICS)
+    assert capsys.readouterr().err == ""
 
 
 def test_gap_report_lists_missing_topics_per_country() -> None:

@@ -187,7 +187,7 @@ uvx copier update --trust --defaults
 
 Resolve any conflicts, run `just fix` and
 `just check`, then commit. See the template's
-[adopt/update guide](https://constitutivetemplates.github.io/daimonion/main/how-to/update-template/)
+[adopt/update guide](https://constitutivetemplates.github.io/architekton-py/main/how-to/update-template/)
 for the conflict-resolution workflow.
 
 

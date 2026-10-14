@@ -29,7 +29,7 @@ It is recommended that developers use a [vscode devcontainer](https://code.visua
 
 This project was created using the [python-copier-template](https://github.com/ConstitutiveTemplates/open-law) for Python projects.
 
-For more information on common tasks like setting up a developer environment, running the tests, and the lint workflow, see the template's [How-to guides](https://constitutivetemplates.github.io/daimonion/main/how-to/).
+For more information on common tasks like setting up a developer environment, running the tests, and the lint workflow, see the template's [How-to guides](https://constitutivetemplates.github.io/architekton-py/main/how-to/).
 
 ## Blast radius
 

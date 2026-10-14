@@ -57,3 +57,17 @@ $ open-law sources
 $ open-law search jp 銀行法 --limit 3
 $ open-law fetch uk ukcm/2023/1
 ```
+
+## Language
+
+English is the canonical language of these docs; Japanese versions, where
+they exist, are translations kept to the same standard.
+
+## Not legal advice
+
+politeuma records what legal sources say and which engineering practices
+they support. It does not decide whether your product complies with any
+law, and using it does not make anything compliant. Sources can go out of
+date or be misread, so every rule shows its sources and the date it was
+last checked. Contributors and reviewers share their understanding in good
+faith; their contributions are not legal advice to you or anyone else.

@@ -3,7 +3,7 @@
 **Probe date:** 2026-09 · **Method:** robots.txt + endpoint probes from
 this network, politely (single requests, spaced). Status is evidence-based,
 not aspirational; re-probe before acting on a row. The charter
-([CHARTER.md](https://github.com/kasi-x/open-law/blob/main/CHARTER.md)) governs every row: robots.txt is law,
+([CHARTER.md](https://github.com/politeuma/open-law/blob/main/CHARTER.md)) governs every row: robots.txt is law,
 a 403 challenge means denied, and an API that exists but is
 robots-disallowed stays off-limits.
 

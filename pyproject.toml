@@ -29,7 +29,8 @@ dependencies = [
     "defusedxml>=0.7.1",
     "typing-extensions>=4.16.0",
 ]
-urls.GitHub = "https://github.com/kasi-x/open-law"
+urls.GitHub = "https://github.com/politeuma/open-law"
+urls.Documentation = "https://politeuma.github.io/open-law"
 scripts.open-law = "open_law.__main__:main"
 
 [project.optional-dependencies]
@@ -396,7 +397,7 @@ suppress-none-returning = false
 
 [tool.ruff.lint.per-file-ignores]
 # By default, private member access is allowed in tests
-# See https://github.com/kasi-x/python-copier-template/issues/154
+# See https://github.com/politeuma/architekton-py/issues/154
 # Remove this line to forbid private member access in tests
 "tests/**/*" = [
     "SLF001", # private member access  CONTEXT: テストは private を直接叩くことがある

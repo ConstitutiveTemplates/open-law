@@ -1,6 +1,6 @@
 # Changes here will be overwritten by Copier
 _commit: 6.0.0
-_src_path: ./python-copier-template
+_src_path: https://github.com/politeuma/architekton-py.git
 allow_japanese: true
 author_email: kashimiya.exe@gmail.com
 author_name: kashi-x
@@ -8,7 +8,7 @@ description: Scrape and consolidate legislation from around the world
 distribution_name: open-law
 existing_project: false
 git_platform: github.com
-github_org: kasi-x
+github_org: politeuma
 include_ctf: false
 include_data_science: false
 include_scraping: true

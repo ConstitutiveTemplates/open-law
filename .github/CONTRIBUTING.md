@@ -27,9 +27,9 @@ same or is improved by a pull request!
 
 It is recommended that developers use a [vscode devcontainer](https://code.visualstudio.com/docs/devcontainers/containers). This repository contains configuration to set up a containerized development environment that suits its own needs.
 
-This project was created using the [python-copier-template](https://github.com/politeuma/open-law) for Python projects.
+This project was created using the [architekton-py](https://github.com/politeuma/architekton-py) template for Python projects.
 
-For more information on common tasks like setting up a developer environment, running the tests, and the lint workflow, see the template's [How-to guides](https://constitutivetemplates.github.io/architekton-py/main/how-to/).
+For more information on common tasks like setting up a developer environment, running the tests, and the lint workflow, see the template's [How-to guides](https://politeuma.github.io/architekton-py/main/how-to/).
 
 ## Blast radius
 

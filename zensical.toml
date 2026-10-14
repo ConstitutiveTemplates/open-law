@@ -1,14 +1,14 @@
 [project]
-site_url = "https://kasi-x.github.io/open-law"
+site_url = "https://politeuma.github.io/open-law/main/"
 site_name = "open-law"
 site_description = "Scrape and consolidate legislation from around the world"
 site_author = "kashi-x"
 
-repo_url = "https://github.com/kasi-x/open-law"
-repo_name = "kasi-x/open-law"
+repo_url = "https://github.com/politeuma/open-law"
+repo_name = "politeuma/open-law"
 edit_uri = "edit/main/docs/"
 
-copyright = 'Maintained by <a href="https://github.com/kasi-x/open-law">kashi-x</a>.'
+copyright = 'Maintained by <a href="https://github.com/politeuma/open-law">kashi-x</a>.'
 
 nav = [
   { "Home" = "index.md" },

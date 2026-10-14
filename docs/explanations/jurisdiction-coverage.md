@@ -4,7 +4,7 @@
 each, politely (single spaced requests, `open-law-probe/1.0` UA). Status
 is evidence-based, not aspirational; re-probe before acting on a row.
 The charter
-([CHARTER.md](https://github.com/kasi-x/open-law/blob/main/CHARTER.md))
+([CHARTER.md](https://github.com/politeuma/open-law/blob/main/CHARTER.md))
 governs every row: robots.txt is law, a 403 challenge means denied, and
 an API that exists but is robots-disallowed stays off-limits. Asia rows
 live in [asia-coverage.md](asia-coverage.md); this file covers the

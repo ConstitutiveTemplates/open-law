@@ -16,14 +16,14 @@
   },
   "packageRules": [
     {
-      "description": "Disable python version as that is managed by python-copier-template",
+      "description": "Disable python version as that is managed by the architekton-py template",
       "matchManagers": [
         "pyenv"
       ],
       "enabled": false
     },
     {
-      "description": "Core CI actions managed by python-copier-template (checkout, toolchain setup, lint/test helpers)",
+      "description": "Core CI actions managed by the architekton-py template (checkout, toolchain setup, lint/test helpers)",
       "matchPackageNames": [
         "actions/checkout",
         "astral-sh/setup-uv",
@@ -40,7 +40,7 @@
       "enabled": false
     },
     {
-      "description": "Hygiene actions managed by python-copier-template (secrets, workflow linting, REUSE, CITATION.cff)",
+      "description": "Hygiene actions managed by the architekton-py template (secrets, workflow linting, REUSE, CITATION.cff)",
       "matchPackageNames": [
         "gitleaks/gitleaks-action",
         "rhysd/actionlint",
@@ -53,7 +53,7 @@
       "enabled": false
     },
     {
-      "description": "Release actions managed by python-copier-template (release notes, coverage, changelog)",
+      "description": "Release actions managed by the architekton-py template (release notes, coverage, changelog)",
       "matchPackageNames": [
         "softprops/action-gh-release",
         "orhun/git-cliff-action",
@@ -65,7 +65,7 @@
       "enabled": false
     },
     {
-      "description": "Docs deploy action managed by python-copier-template",
+      "description": "Docs deploy action managed by the architekton-py template",
       "matchPackageNames": [
         "peaceiris/actions-gh-pages"
       ],
@@ -75,7 +75,7 @@
       "enabled": false
     },
     {
-      "description": "Disable Dockerfile base images that are managed by python-copier-template",
+      "description": "Disable Dockerfile base images that are managed by the architekton-py template",
       "matchManagers": [
         "dockerfile"
       ],

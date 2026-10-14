@@ -1,7 +1,8 @@
 """robots.txt gating for the polite fetcher.
 
-The parser is fetched once per origin and reused: robots.txt barely
-moves, and re-fetching it per page would itself be impolite load.
+The parser is fetched once per host and stored on that host's
+:class:`~open_law.fetch_state.HostState`: robots.txt barely moves, and
+re-fetching it per page would itself be impolite load.
 """
 
 from __future__ import annotations
@@ -14,21 +15,15 @@ import httpx
 __all__ = ["load_robots_parser"]
 
 
-def load_robots_parser(
-    page_url: str,
-    client: httpx.Client,
-    cache: dict[str, urllib.robotparser.RobotFileParser],
-) -> urllib.robotparser.RobotFileParser:
-    """Fetch (once per origin) and parse the site's robots.txt.
+def load_robots_parser(page_url: str, client: httpx.Client) -> urllib.robotparser.RobotFileParser:
+    """Fetch and parse the site's robots.txt for *page_url*'s origin.
 
-    *cache* maps origins to parsed parsers; transport failures yield an
+    The caller decides when to call this (robots.txt is the first request
+    to a host) and where to cache the result. Transport failures yield an
     empty (fully permissive) parser rather than blocking the fetch.
     """
     parts = urllib.parse.urlsplit(page_url)
     origin = f"{parts.scheme}://{parts.netloc}"
-    cached = cache.get(origin)
-    if cached is not None:
-        return cached
     parser = urllib.robotparser.RobotFileParser()
     parser.set_url(f"{origin}/robots.txt")
     try:
@@ -37,5 +32,4 @@ def load_robots_parser(
     except httpx.HTTPError:
         lines = []
     parser.parse(lines)
-    cache[origin] = parser
     return parser

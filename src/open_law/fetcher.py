@@ -26,9 +26,12 @@ excessive:
    default 100). Exceeding the budget raises :class:`BudgetExceededError`:
    what is polite at 10 requests is a DDoS at 10 000 — stop and ask before
    scaling up.
-5. **Cache** — GET responses are cached under ``.cache/fetcher/`` (keyed
-   by URL hash) for ``cache_ttl_seconds`` (default 1 day), so re-runs and
-   tests never refetch. A cache hit skips the rate-limit wait.
+5. **Cache** — responses are cached under ``FetchConfig.cache_dir`` (the
+   platform user cache by default) for ``cache_ttl_seconds`` (default 1
+   day), keyed by the URL *and* the request's content-negotiation headers,
+   so an EUR-Lex RDF fetch is never served an HTML body. Text and binary
+   bodies are cached separately — bytes never round-trip through UTF-8. A
+   cache hit skips the rate-limit wait.
 
 The ``User-Agent`` always identifies this project plus a contact address
 (``FetchConfig.contact``, else the ``FETCHER_CONTACT`` env read when the
@@ -42,29 +45,32 @@ Requires the ``httpx`` runtime dependency (added automatically with this
 engine). Tests use ``respx``-style monkeypatched transports — no network.
 
 This module is the orchestration layer: vocabulary lives in
-:mod:`open_law.fetch_models`, the disk cache in
-:mod:`open_law.fetch_cache`, robots.txt in :mod:`open_law.fetch_robots`,
-feed/API discovery in :mod:`open_law.fetch_discovery`, and the archive
-fallback in :mod:`open_law.fetch_wayback`. Every name those modules
-expose is re-exported here so ``from open_law.fetcher import FetchConfig``
-keeps working.
+:mod:`open_law.fetch_models`, per-host session state in
+:mod:`open_law.fetch_state`, the disk cache in :mod:`open_law.fetch_cache`,
+robots.txt in :mod:`open_law.fetch_robots`, feed/API discovery in
+:mod:`open_law.fetch_discovery`, and the archive fallback in
+:mod:`open_law.fetch_wayback`. Every name those modules expose is
+re-exported here so ``from open_law.fetcher import FetchConfig`` keeps
+working.
 """
 
 from __future__ import annotations
 
 import time
-import urllib.parse
 import urllib.robotparser
 from typing import Self
 
 import httpx
 
 from open_law.fetch_cache import read_cached_body
+from open_law.fetch_cache import read_cached_bytes
 from open_law.fetch_cache import write_cached_body
+from open_law.fetch_cache import write_cached_bytes
 from open_law.fetch_discovery import OriginDiscovery
 from open_law.fetch_models import AccessDeniedError
 from open_law.fetch_models import BudgetExceededError
 from open_law.fetch_models import ContactRequiredError
+from open_law.fetch_models import FetchBytesResult
 from open_law.fetch_models import FetchConfig
 from open_law.fetch_models import FetchResult
 from open_law.fetch_models import FetchTextResult
@@ -73,6 +79,10 @@ from open_law.fetch_models import RobotDeniedError
 from open_law.fetch_models import access_denied_error as _access_denied
 from open_law.fetch_models import http_parts as _http_parts
 from open_law.fetch_robots import load_robots_parser
+from open_law.fetch_state import HostState
+from open_law.fetch_state import SessionState
+from open_law.fetch_wayback import wayback_bytes_for_error_status
+from open_law.fetch_wayback import wayback_bytes_on_transport_error
 from open_law.fetch_wayback import wayback_for_error_status
 from open_law.fetch_wayback import wayback_on_transport_error
 
@@ -80,31 +90,30 @@ __all__ = [
     "AccessDeniedError",
     "BudgetExceededError",
     "ContactRequiredError",
+    "FetchBytesResult",
     "FetchConfig",
     "FetchResult",
     "FetchTextResult",
+    "HostState",
     "PoliteFetcher",
     "Preflight",
     "RobotDeniedError",
+    "SessionState",
     "fetch_text",
     "preflight",
 ]
 
-_ROBOTS_CACHE: dict[str, urllib.robotparser.RobotFileParser] = {}
-_LAST_FETCH_AT: dict[str, float] = {}
-_REQUEST_COUNTS: dict[str, int] = {}
-# Origin discovery cache: origin -> (feed_url, api_hint, probed_at).
-# Feed/API endpoints barely move, so findings are reused for
-# `cache_ttl_seconds` instead of re-probing 8+ feed paths + API hints on
-# every call. Without this, politeness probing itself becomes the load:
-# one page fetch cost HEAD + robots + 8 feed GETs + API probes.
-_DISCOVERY_CACHE: dict[str, tuple[str | None, str | None, float]] = {}
-
 
 class PoliteFetcher:
-    """httpx-backed polite fetcher: robots check + rate limit + disk cache."""
+    """httpx-backed polite fetcher: robots check + rate limit + disk cache.
+
+    Per-host state (robots.txt parser, rate-limit stamp, request count,
+    discovery findings) lives in :attr:`state`, owned by this instance:
+    two fetchers in one process never share a session.
+    """
 
     config: FetchConfig
+    state: SessionState
     _client: httpx.Client
     _owns_client: bool
     # Last fetch provenance, set after each fetch_text/fetch_bytes.
@@ -118,6 +127,10 @@ class PoliteFetcher:
         transport: httpx.BaseTransport | None = None,
     ) -> None:
         self.config = config or FetchConfig()
+        # Content-negotiation headers, kept for the cache key: the same URL
+        # fetched as RDF and as HTML must not share a cache entry.
+        self._headers: dict[str, str] = dict(headers or {})
+        self.state = SessionState()
         if client is None:
             merged = {"User-Agent": self.config.resolved_user_agent()}
             merged.update(headers or {})
@@ -129,9 +142,24 @@ class PoliteFetcher:
             )
             self._owns_client = True
         else:
+            # The negotiation headers are the fetcher's contract, not the
+            # caller's: an injected client must carry them too, or the EU
+            # adapter's RDF ``Accept`` would silently vanish in tests.
             self._client = client
+            self._client.headers.update(headers or {})
             self._owns_client = False
         self.last_result = None
+
+    def set_config(self, config: FetchConfig) -> None:
+        """Swap in *config* and keep the client's User-Agent in step.
+
+        The User-Agent (project name + contact) is baked into the client
+        when it is built, so a changed contact must be pushed onto the
+        client too — otherwise the "an operator can always reach you"
+        promise would hold only on paper.
+        """
+        self.config = config
+        self._client.headers["User-Agent"] = config.resolved_user_agent()
 
     def close(self) -> None:
         """Close the owned httpx client (no-op for injected clients)."""
@@ -164,7 +192,7 @@ class PoliteFetcher:
         origin = f"{parts.scheme}://{parts.netloc}"
         host = parts.netloc
         self._check_budget(host)
-        count = _REQUEST_COUNTS.get(host, 0)
+        count = self.state.count_of(host)
         self._robots_gate(url)
         probe = self._probe_page(url)
         self._deny_if_blocked(probe, origin)
@@ -195,29 +223,29 @@ class PoliteFetcher:
             raise _access_denied(origin, probe.status_code)
 
     def _robots_parser(self, url: str) -> urllib.robotparser.RobotFileParser:
-        """The robots.txt parser for *url*'s origin.
+        """The robots.txt parser for *url*'s host, fetched at most once.
 
         The robots.txt fetch is the only request that cannot be checked
         against robots.txt; it still needs a real contact, fits the
         budget, waits for the host's slot, and counts.
         """
-        parts = urllib.parse.urlsplit(url)
-        origin = f"{parts.scheme}://{parts.netloc}"
-        cached = _ROBOTS_CACHE.get(origin)
-        if cached is not None:
-            return cached
-        host = parts.netloc
+        host = _http_parts(url).netloc
+        host_state: HostState = self.state.host(host)
+        if host_state.robots is not None:
+            return host_state.robots
         self.config.require_contact()
         self._check_budget(host)
         self._wait_for_slot(host)
         try:
-            return load_robots_parser(url, self._client, _ROBOTS_CACHE)
+            parser = load_robots_parser(url, self._client)
         finally:
-            _REQUEST_COUNTS[host] = _REQUEST_COUNTS.get(host, 0) + 1
+            self.state.count_request(host)
+        host_state.robots = parser
+        return parser
 
     def _check_budget(self, host: str) -> None:
         """Raise BudgetExceededError when *host* exhausted its session budget."""
-        count = _REQUEST_COUNTS.get(host, 0)
+        count = self.state.count_of(host)
         if count >= self.config.max_requests_per_host:
             msg = (
                 f"host budget exhausted for {host!r}: {count} requests "
@@ -243,7 +271,7 @@ class PoliteFetcher:
         try:
             return self._client.request(method, url, timeout=self.config.timeout_seconds)
         finally:
-            _REQUEST_COUNTS[host] = _REQUEST_COUNTS.get(host, 0) + 1
+            self.state.count_request(host)
 
     def _discover(self, origin: str) -> tuple[str | None, str | None]:
         """Cached (feed_url, api_hint) discovery for *origin*.
@@ -253,8 +281,8 @@ class PoliteFetcher:
         itself impolite. Every probe goes through :meth:`_send`, so a
         feed path robots.txt disallows is never requested or returned.
         """
-        discovery = OriginDiscovery(self.config, _DISCOVERY_CACHE, self._send)
-        return discovery.discover(origin)
+        discovery = OriginDiscovery(self.config, self._send)
+        return discovery.discover(origin, self.state.host(_http_parts(origin).netloc))
 
     def _robots_gate(self, url: str) -> None:
         """Scheme and robots.txt gate without feed/API discovery.
@@ -281,27 +309,26 @@ class PoliteFetcher:
         return url
 
     def _wait_for_slot(self, host: str) -> None:
-        """Sleep until *host*'s rate-limit delay has elapsed, then stamp it."""
-        now = time.monotonic()
-        last = _LAST_FETCH_AT.get(host, 0.0)
-        wait = self.config.delay_seconds - (now - last)
+        """Sleep until *host*'s rate-limit slot opens, then claim it."""
+        wait = self.state.reserve_slot(host, self.config.delay_seconds)
         if wait > 0:
             time.sleep(wait)
-        _LAST_FETCH_AT[host] = time.monotonic()
+
+    def _remember_text(self, result: FetchResult | None) -> FetchResult | None:
+        """Cache a Wayback text result under the negotiation-aware key."""
+        if result is None:
+            return None
+        write_cached_body(result.url, result.text, self.config, self._headers)
+        self.last_result = result
+        return result
 
     def _wayback_for_error_status(self, url: str, response: httpx.Response) -> FetchResult | None:
         """Wayback result for a 5xx *response*; else raise; None on success."""
-        result = wayback_for_error_status(self._client, url, response, self.config, _REQUEST_COUNTS)
-        if result is not None:
-            self.last_result = result
-        return result
+        return self._remember_text(wayback_for_error_status(self._client, url, response, self.config, self.state))
 
     def _wayback_on_transport_error(self, url: str) -> FetchResult | None:
         """Wayback result after a transport failure; None when not attempted/found."""
-        result = wayback_on_transport_error(self._client, url, self.config, _REQUEST_COUNTS)
-        if result is not None:
-            self.last_result = result
-        return result
+        return self._remember_text(wayback_on_transport_error(self._client, url, self.config, self.state))
 
     def fetch_result(self, url: str, *, discover: bool = True) -> FetchResult:
         """GET *url* politely, returning a :class:`FetchResult` with provenance.
@@ -316,7 +343,7 @@ class PoliteFetcher:
         url = self._resolve_url(url, discover=discover)
         # Cache before the rate limit: a cached body costs the host nothing,
         # so a fully cached re-run must not sleep per item.
-        cached_text = read_cached_body(url, config)
+        cached_text = read_cached_body(url, config, self._headers)
         if cached_text is not None:
             result = FetchResult(text=cached_text, url=url)
             self.last_result = result
@@ -345,7 +372,7 @@ class PoliteFetcher:
         # Success path: 2xx.
         assert response is not None
         text = response.text
-        write_cached_body(url, text, config)
+        write_cached_body(url, text, config, self._headers)
         result = FetchResult(text=text, url=url)
         self.last_result = result
         return result
@@ -380,30 +407,71 @@ class PoliteFetcher:
             wayback_timestamp=result.wayback_timestamp,
         )
 
+    def _wayback_bytes_for_error_status(self, url: str, response: httpx.Response) -> bytes | None:
+        """Wayback bytes for a 5xx *response*; else raise; None on success."""
+        result = wayback_bytes_for_error_status(self._client, url, response, self.config, self.state)
+        return self._remember_bytes(url, result)
+
+    def _wayback_bytes_on_transport_error(self, url: str) -> bytes | None:
+        """Wayback bytes after a transport failure; None when not attempted/found."""
+        result = wayback_bytes_on_transport_error(self._client, url, self.config, self.state)
+        return self._remember_bytes(url, result)
+
+    def _remember_bytes(self, url: str, result: FetchBytesResult | None) -> bytes | None:
+        """Cache a Wayback binary result and record it as ``last_result``."""
+        if result is None:
+            return None
+        write_cached_bytes(url, result.data, self.config, self._headers)
+        self.last_result = FetchResult(
+            text=result.data.decode("utf-8", errors="replace"),
+            url=url,
+            from_wayback=True,
+            wayback_url=result.wayback_url,
+            wayback_timestamp=result.wayback_timestamp,
+        )
+        return result.data
+
     def fetch_bytes(self, url: str, *, discover: bool = False) -> bytes:
-        """GET *url* as bytes (for PDFs and other binary documents)."""
-        # Reuse the same politeness gate as fetch_text, but return raw bytes.
-        # Binary responses are not cached as text; cache the decoded text
-        # when the server sent text, otherwise skip the text cache.
+        """GET *url* as raw bytes (for PDFs and other binary documents).
+
+        The bytes path has its own cache: payloads are stored verbatim and
+        never round-trip through UTF-8, so a PDF comes back byte-identical.
+        Caching and rate limiting work exactly as in
+        :meth:`fetch_text` (cache first, then the politeness gate), and the
+        Wayback fallback (5xx and transport failures only, never 4xx)
+        fetches the snapshot's raw ``id_`` URL so the archived file — not
+        Wayback's rewritten page — is what lands in the cache.
+        """
+        config = self.config
         url = self._resolve_url(url, discover=discover)
+        cached = read_cached_bytes(url, config, self._headers)
+        if cached is not None:
+            self.last_result = FetchResult(text=cached.decode("utf-8", errors="replace"), url=url)
+            return cached
+        response: httpx.Response | None = None
         try:
             response = self._send("GET", url)
             if response.status_code in (401, 403):
                 raise _access_denied(url, response.status_code)
-            wb = self._wayback_for_error_status(url, response)
+            wb = self._wayback_bytes_for_error_status(url, response)
             if wb is not None:
-                return wb.text.encode("utf-8")
-            data = response.content
-            # Update last_result for provenance (text view for CLI).
-            self.last_result = FetchResult(text=data.decode("utf-8", errors="replace"), url=url)
-            return data
+                return wb
         except (AccessDeniedError, RobotDeniedError, BudgetExceededError):
             raise
+        except httpx.HTTPStatusError as exc:
+            # 4xx/5xx surfaced by raise_for_status — only 5xx already handled above.
+            raise exc from None
         except httpx.HTTPError:
-            wb = self._wayback_on_transport_error(url)
+            wb = self._wayback_bytes_on_transport_error(url)
             if wb is not None:
-                return wb.text.encode("utf-8")
+                return wb
             raise
+        assert response is not None
+        data = response.content
+        write_cached_bytes(url, data, config, self._headers)
+        # Update last_result for provenance (text view for CLI).
+        self.last_result = FetchResult(text=data.decode("utf-8", errors="replace"), url=url)
+        return data
 
 
 def preflight(url: str, config: FetchConfig | None = None) -> Preflight:

@@ -28,6 +28,7 @@ dependencies = [
     "httpx>=0.27,<1",
     "defusedxml>=0.7.1",
     "typing-extensions>=4.16.0",
+    "platformdirs>=4.2",
 ]
 urls.GitHub = "https://github.com/politeuma/open-law"
 urls.Documentation = "https://politeuma.github.io/open-law"

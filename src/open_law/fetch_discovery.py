@@ -2,10 +2,11 @@
 
 Before scraping an HTML page, the fetcher probes the origin's feed
 endpoints (``/feed``, ``/rss.xml``, ``/atom.xml``, ...) and machine-API
-hints (``/api``, ``api.`` subdomain, ``openapi.json``). Findings are
-cached per origin for ``FetchConfig.cache_ttl_seconds``: without this,
-politeness probing itself becomes the load — one page fetch would cost
-HEAD + robots + 8 feed GETs + API probes.
+hints (``/api``, ``api.`` subdomain, ``openapi.json``). Findings are kept
+on the host's :class:`~open_law.fetch_state.HostState` for
+``FetchConfig.cache_ttl_seconds``: without this, politeness probing itself
+becomes the load — one page fetch would cost HEAD + robots + 8 feed GETs
++ API probes.
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ import httpx
 
 from open_law.fetch_models import FetchConfig
 from open_law.fetch_models import RobotDeniedError
+from open_law.fetch_state import HostState
 
 __all__ = [
     "API_PATHS",
@@ -44,9 +46,6 @@ FEED_PATHS: tuple[str, ...] = (
 
 # Machine-API hints probed before falling back to HTML scraping.
 API_PATHS: tuple[str, ...] = ("/api", "/api.json", "/openapi.json")
-
-# Origin discovery cache: origin -> (feed_url, api_hint, probed_at).
-DiscoveryCache = dict[str, tuple[str | None, str | None, float]]
 
 # The fetcher's one network door: ``send(method, url)`` checks robots.txt,
 # waits for the host's rate-limit slot, sends, then counts the request.
@@ -104,20 +103,18 @@ def find_api_hint(origin: str, send: Send) -> str | None:
 
 
 class OriginDiscovery:
-    """Per-origin feed/API discovery bound to one fetcher session.
+    """Feed/API discovery bound to one host's session state.
 
-    Holds the TTL config, the shared discovery cache, and the fetcher's
-    single send function — which applies robots.txt, the rate limit and
-    the host budget to every probe — so each lookup is
-    ``discover(origin)``.
+    Holds the TTL config and the fetcher's single send function — which
+    applies robots.txt, the rate limit and the host budget to every probe
+    — so each lookup is ``discover(origin, host_state)``.
     """
 
-    def __init__(self, config: FetchConfig, discovery_cache: DiscoveryCache, send: Send) -> None:
+    def __init__(self, config: FetchConfig, send: Send) -> None:
         self._config = config
-        self._cache = discovery_cache
         self._send = send
 
-    def discover(self, origin: str) -> tuple[str | None, str | None]:
+    def discover(self, origin: str, host: HostState) -> tuple[str | None, str | None]:
         """Cached (feed_url, api_hint) discovery for *origin*.
 
         Findings are reused for ``cache_ttl_seconds``: feed/API endpoints
@@ -126,12 +123,12 @@ class OriginDiscovery:
         requested, so it is never returned: the feed switch must not
         bypass a denial.
         """
-        cached = self._cache.get(origin)
+        cached = host.discovery
         if cached is not None:
             feed_url, api_hint, probed_at = cached
             if time.time() - probed_at < self._config.cache_ttl_seconds:
                 return feed_url, api_hint
         feed_url = find_feed_url(origin, self._send)
         api_hint = find_api_hint(origin, self._send)
-        self._cache[origin] = (feed_url, api_hint, time.time())
+        host.discovery = (feed_url, api_hint, time.time())
         return feed_url, api_hint

@@ -31,6 +31,7 @@ def build_parser() -> ArgumentParser:
         version=__version__,
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
+    politeness = _politeness_parser()
 
     subparsers.add_parser("sources", help="list the registered jurisdiction adapters")
 
@@ -40,14 +41,14 @@ def build_parser() -> ArgumentParser:
     )
     preflight_parser.add_argument("url", help="the URL to judge")
 
-    search_parser = subparsers.add_parser("search", help="title-search one source")
+    search_parser = subparsers.add_parser("search", help="title-search one source", parents=[politeness])
     search_parser.add_argument("source", help="source id (see 'open-law sources')")
     search_parser.add_argument("query", help="title text to search for")
     search_parser.add_argument("--limit", type=int, default=10, help="max results (default 10)")
 
-    _add_wayback_parser(subparsers, "fetch", "fetch one law as JSON")
-    _add_wayback_parser(subparsers, "text", "fetch one law's full text as plain text")
-    dump_parser = _add_wayback_parser(subparsers, "dump", "fetch several laws and consolidate as JSONL")
+    _add_wayback_parser(subparsers, "fetch", "fetch one law as JSON", politeness)
+    _add_wayback_parser(subparsers, "text", "fetch one law's full text as plain text", politeness)
+    dump_parser = _add_wayback_parser(subparsers, "dump", "fetch several laws and consolidate as JSONL", politeness)
     dump_parser.add_argument("law_ids", nargs="*", help="source-native ids (or use --ids-from)")
     dump_parser.add_argument("--ids-from", help="file with one id per line ('-' for stdin)")
     dump_parser.add_argument("--out", help="JSONL file to write (default: stdout)")
@@ -79,11 +80,41 @@ def build_parser() -> ArgumentParser:
     return parser
 
 
+def _politeness_parser() -> ArgumentParser:
+    """The politeness knobs shared by every fetching subcommand.
+
+    ``add_help=False`` and no help text of its own: it is only ever used
+    as a ``parents=`` source, so it never appears as a command.
+    """
+    parser = ArgumentParser(add_help=False)
+    parser.add_argument(
+        "--budget",
+        type=int,
+        metavar="N",
+        help="max requests per host for this session (default 100; robots.txt and discovery probes count)",
+    )
+    parser.add_argument(
+        "--delay",
+        type=float,
+        metavar="SECONDS",
+        help="minimum seconds between requests to one host (default: the adapter's declared crawl delay)",
+    )
+    parser.add_argument(
+        "--contact",
+        metavar="EMAIL",
+        help="contact address for the User-Agent (default: the FETCHER_CONTACT environment variable)",
+    )
+    return parser
+
+
 def _add_wayback_parser(
-    subparsers: argparse._SubParsersAction[ArgumentParser], name: str, help_text: str
+    subparsers: argparse._SubParsersAction[ArgumentParser],
+    name: str,
+    help_text: str,
+    politeness: ArgumentParser,
 ) -> ArgumentParser:
     """A source-bound subcommand parser with ``source``/``law_id``/``--wayback``."""
-    cmd_parser = subparsers.add_parser(name, help=help_text)
+    cmd_parser = subparsers.add_parser(name, help=help_text, parents=[politeness])
     cmd_parser.add_argument("source", help="source id (see 'open-law sources')")
     if name != "dump":
         cmd_parser.add_argument("law_id", help="source-native id, e.g. 'ukpga/1989/6' or a CELEX")

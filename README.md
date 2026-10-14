@@ -8,10 +8,10 @@ with Akoma Ntoso locations surfaced whenever a source offers them.
 
 <div align="center">
 
-[![CI](https://github.com/ConstitutiveTemplates/open-law/actions/workflows/ci.yml/badge.svg)](https://github.com/ConstitutiveTemplates/open-law/actions/workflows/ci.yml)
-[![Coverage](https://codecov.io/gh/ConstitutiveTemplates/open-law/branch/main/graph/badge.svg)](https://codecov.io/gh/ConstitutiveTemplates/open-law)
+[![CI](https://github.com/politeuma/open-law/actions/workflows/ci.yml/badge.svg)](https://github.com/politeuma/open-law/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/politeuma/open-law/branch/main/graph/badge.svg)](https://codecov.io/gh/politeuma/open-law)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-3776AB.svg?logo=python&logoColor=white)](https://github.com/ConstitutiveTemplates/open-law)
+[![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-3776AB.svg?logo=python&logoColor=white)](https://github.com/politeuma/open-law)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Copier](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/copier-org/copier/master/img/badge/badge-black.json)](https://github.com/copier-org/copier)
 [![Documentation](https://img.shields.io/badge/docs-https://constitutivetemplates.github.io/open-law-8A2BE2?logo=gitbook&logoColor=white)](https://constitutivetemplates.github.io/open-law)
@@ -115,9 +115,9 @@ permission.
 
 What            | Where
 :---:           | :---:
-Source          | <https://github.com/ConstitutiveTemplates/open-law>
+Source          | <https://github.com/politeuma/open-law>
 Documentation   | <https://constitutivetemplates.github.io/open-law>
-Releases        | <https://github.com/ConstitutiveTemplates/open-law/releases>
+Releases        | <https://github.com/politeuma/open-law/releases>
 Security        | [SECURITY.md](SECURITY.md) — how to report a vulnerability
 Agent guide     | [AGENTS.md](AGENTS.md) — instructions for AI coding agents
 
@@ -128,7 +128,7 @@ Agent guide     | [AGENTS.md](AGENTS.md) — instructions for AI coding agents
 Prerequisites: Python 3.11 or later and [uv](https://docs.astral.sh/uv/).
 
 ```sh
-git clone https://github.com/ConstitutiveTemplates/open-law.git
+git clone https://github.com/politeuma/open-law.git
 cd open-law
 uv sync                      # create .venv and install everything (incl. dev deps)
 
@@ -174,7 +174,7 @@ running tests and making a release.
 ## 🤝 Contributing
 
 Contributions are welcome! See [CONTRIBUTING.md](.github/CONTRIBUTING.md) and the
-[issue tracker](https://github.com/ConstitutiveTemplates/open-law/issues).
+[issue tracker](https://github.com/politeuma/open-law/issues).
 
 ## 🔄 Updating from the template
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from open_law.correspond import _language_of
 from open_law.correspond import find_correspondences
 from open_law.corpus import CorpusEntry
 from open_law.topics import DEFAULT_TOPICS
@@ -61,3 +62,72 @@ def test_annotations_override_the_classifier() -> None:
     expert_topics = {"biosafety": ("biosafety framework",)}
     candidates = find_correspondences(entries, expert_topics, annotations, min_similarity=0.3)
     assert candidates and candidates[0].topic == "biosafety"
+
+
+def test_cross_language_pair_is_proposed_by_topic_and_era() -> None:
+    """銀行法 ↔ Banking Act 2009: a candidate by topic and era, never scored.
+
+    The memo's own example: title similarity across Japanese and English is
+    ~0 and means nothing, so the pair is offered unscored for review.
+    """
+    entries = [
+        _entry("jp", "1", "JP", "銀行法"),
+        _entry("uk", "2", "GB", "Banking Act 2009", "2009-02-12"),
+    ]
+    candidates = find_correspondences(entries, DEFAULT_TOPICS)
+    assert len(candidates) == 1
+    candidate = candidates[0]
+    assert candidate.topic == "banking"
+    assert candidate.similarity is None
+    assert candidate.basis == "topic+era"
+    assert "銀行" in candidate.terms_a
+    assert "banking act" in candidate.terms_b
+
+
+def test_jlt_english_title_bridges_a_japanese_law() -> None:
+    """The corpus's jlt entry scores a JP law in English against a UK one."""
+    entries = [
+        _entry("jp", "1", "JP", "銀行法", "1981-06-01"),
+        _entry("jlt", "4913", "JP", "Banking Act", "1981-06-01"),
+        _entry("uk", "2", "GB", "Banking Act 2009", "2009-02-12"),
+    ]
+    # The memo's example spans a generation, so the era window is raised
+    # here; the point of the test is the bridge, not the window.
+    candidates = find_correspondences(entries, DEFAULT_TOPICS, year_window=30)
+    bridged = [candidate for candidate in candidates if candidate.basis == "bridge"]
+    assert bridged, [(candidate.basis, candidate.title_a, candidate.title_b) for candidate in candidates]
+    assert bridged[0].similarity is not None
+    assert bridged[0].similarity >= 0.5
+    assert (bridged[0].title_a, bridged[0].title_b) == ("銀行法", "Banking Act 2009")
+
+
+def test_same_language_titles_below_the_floor_are_dropped() -> None:
+    """Within one language the similarity floor still applies."""
+    entries = [
+        _entry("uk", "1", "GB", "Data Protection Act 2018"),
+        _entry("xx", "2", "XX", "Privacy Regulation of Records"),
+    ]
+    # Both are data-protection laws in Latin script, but the titles are not
+    # similar, so no candidate is proposed.
+    assert find_correspondences(entries, DEFAULT_TOPICS) == []
+
+
+def test_scriptless_title_pairs_on_topic_and_era_only() -> None:
+    """A title in no recognised script has no language to compare with."""
+    entries = [
+        _entry("xx", "1", "XX", "①②③"),
+        _entry("yy", "2", "YY", "Data Protection Act 2018"),
+    ]
+    annotations = {"xx:1": ("data-protection",), "yy:2": ("data-protection",)}
+    assert _language_of("①②③") == "unknown"
+    candidates = find_correspondences(entries, DEFAULT_TOPICS, annotations)
+    assert len(candidates) == 1
+    assert candidates[0].similarity is None
+    assert candidates[0].basis == "topic+era"
+
+
+def test_language_buckets_are_script_based() -> None:
+    """Titles are only compared with titles in the same script."""
+    assert _language_of("Data Protection Act 2018") == "latin"
+    assert _language_of("銀行法") == "cjk"
+    assert _language_of("은행법") == "hangul"

@@ -14,7 +14,9 @@ import pytest
 from tests.helpers import FixtureLoader, Offline, RecordingSite
 from open_law import __version__
 from open_law import __main__ as cli
-from open_law.fetcher import Preflight
+from open_law.fetcher import BudgetExceededError, FetchConfig, PoliteFetcher, Preflight
+from open_law.models import Law, LawSummary
+from open_law.sources.adapter import SourceAdapter
 from open_law.sources.bd import BangladeshLawsAdapter
 from open_law.sources.jp import EgovAdapter
 from open_law.sources.la import LaoGazetteAdapter
@@ -191,6 +193,111 @@ def test_dump_without_any_ids_exits_with_error(capsys: pytest.CaptureFixture[str
     assert "no law ids given" in capsys.readouterr().err
 
 
+def test_dump_politeness_flags_reach_the_fetcher(
+    tmp_path: Path, offline: Offline, recording_site: RecordingSite, fixture_text: FixtureLoader
+) -> None:
+    """--budget/--delay/--contact override the adapter's declared politeness."""
+    adapter = offline(
+        LegislationGovUkAdapter,
+        recording_site({"/ukcm/2023/1/data.xml": fixture_text("uk_ukcm_2023_1_data.xml")}, []),
+    )
+    cli.main(
+        [
+            "dump",
+            "uk",
+            "ukcm/2023/1",
+            "--budget",
+            "7",
+            "--delay",
+            "0.5",
+            "--contact",
+            "ops@example.org",
+            "--out",
+            str(tmp_path / "laws.jsonl"),
+        ],
+        adapter_factory=lambda _source: adapter,
+    )
+    config = adapter.fetcher.config
+    assert config.max_requests_per_host == 7
+    assert config.delay_seconds == 0.5
+    assert "ops@example.org" in config.resolved_user_agent()
+    # The User-Agent lives on the client, so the contact must reach it too.
+    assert "ops@example.org" in adapter.fetcher._client.headers["User-Agent"]
+
+
+def test_dump_rejects_a_zero_budget(capsys: pytest.CaptureFixture[str]) -> None:
+    """A budget of zero would refuse every request: say so, do not crawl."""
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(["dump", "uk", "ukcm/2023/1", "--budget", "0"])
+    assert excinfo.value.code == 2
+    assert "--budget must be at least 1" in capsys.readouterr().err
+
+
+def test_dump_rejects_a_negative_delay(capsys: pytest.CaptureFixture[str]) -> None:
+    """A negative delay is not a politeness setting: refuse it."""
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(["dump", "uk", "ukcm/2023/1", "--delay", "-1"])
+    assert excinfo.value.code == 2
+    assert "--delay must not be negative" in capsys.readouterr().err
+
+
+def test_dump_budget_stop_keeps_output_and_offers_resume(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Budget exhaustion writes what it fetched and names the ids left over."""
+    adapter = _budget_stopping_adapter(tmp_path)
+    out = tmp_path / "laws.jsonl"
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(
+            ["dump", "budgetstub", "a", "b", "boom", "d", "--out", str(out)],
+            adapter_factory=lambda _source: adapter,
+        )
+    assert excinfo.value.code == 2
+    assert [json.loads(line)["law_id"] for line in out.read_text(encoding="utf-8").splitlines()] == ["a", "b"]
+    remaining = (tmp_path / "laws.jsonl.remaining").read_text(encoding="utf-8").split()
+    assert remaining == ["boom", "d"]
+    err = capsys.readouterr().err
+    assert "budget reached after 2 of 4 law(s)" in err
+    assert "resume with: open-law dump budgetstub --ids-from" in err
+
+    # Without --out the JSONL goes to stdout and the leftover ids to stderr.
+    with pytest.raises(SystemExit):
+        cli.main(
+            ["dump", "budgetstub", "a", "boom", "b"],
+            adapter_factory=lambda _source: _budget_stopping_adapter(tmp_path / "again"),
+        )
+    streams = capsys.readouterr()
+    assert json.loads(streams.out.splitlines()[0])["law_id"] == "a"
+    assert "boom" in streams.err
+    assert "b" in streams.err
+
+
+def _budget_stopping_adapter(tmp_path: Path) -> SourceAdapter:
+    """A stub adapter whose ``boom`` id exhausts the host budget."""
+
+    class _BudgetStub(SourceAdapter):
+        source_id = "budgetstub"
+        name = "Budget stub"
+        jurisdiction = "XX"
+        homepage = "https://example.com"
+        license_note = "test"
+
+        def search(self, query: str, *, limit: int = 10) -> list[LawSummary]:  # noqa: ARG002
+            return []
+
+        def fetch(self, law_id: str) -> Law:
+            if law_id == "boom":
+                msg = "host budget exhausted for 'example.com': 2 requests (max 2)"
+                raise BudgetExceededError(msg)
+            return Law(
+                source=self.source_id,
+                jurisdiction=self.jurisdiction,
+                law_id=law_id,
+                title=f"law {law_id}",
+            )
+
+    config = FetchConfig(cache_dir=tmp_path / "cache", delay_seconds=0)
+    return _BudgetStub(PoliteFetcher(config))
+
+
 def test_coverage_command_reads_dumped_corpus(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     corpus = tmp_path / "corpus.jsonl"
     corpus.write_text(
@@ -264,6 +371,23 @@ def test_correspond_command_reports_candidates(tmp_path: Path, capsys: pytest.Ca
     assert "candidates for human review" in out
     assert "[data-protection]" in out
     assert "1.000" in out
+
+
+def test_correspond_command_reports_basis_and_matched_terms(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Cross-language candidates are flagged as such, with their keywords."""
+    corpus = tmp_path / "corpus.jsonl"
+    corpus.write_text(
+        json.dumps({"source": "jp", "law_id": "1", "jurisdiction": "JP", "title": "銀行法"}, ensure_ascii=False)
+        + "\n"
+        + json.dumps({"source": "uk", "law_id": "2", "jurisdiction": "GB", "title": "Banking Act 2009"})
+        + "\n",
+        encoding="utf-8",
+    )
+    cli.main(["correspond", str(corpus)])
+    out = capsys.readouterr().out
+    assert "[banking] topic+era" in out
+    assert "matched: 銀行" in out
+    assert "matched: banking" in out
 
 
 def test_correspond_command_silence_is_explicit(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

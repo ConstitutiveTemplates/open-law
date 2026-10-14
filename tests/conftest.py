@@ -21,7 +21,6 @@ from typing import TypeVar
 import httpx
 import pytest
 
-from open_law import fetcher
 from open_law.fetcher import FetchConfig, PoliteFetcher
 from open_law.sources.adapter import SourceAdapter
 from tests.helpers import FixtureLoader, Offline, RecordingSite
@@ -33,19 +32,14 @@ _ROBOTS_ALLOWED = "User-agent: *\nAllow: /\n"
 
 
 @pytest.fixture(autouse=True)
-def _fresh_fetcher_state(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Reset the fetcher's module-global caches around every test.
+def _fetcher_contact(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Give every test a contact address a site operator could reach.
 
-    The robots/discovery/request-count state is module-global by design
-    (one process, one polite session); tests must each start from a clean
-    session or one test's robots cache leaks into the next.
+    Per-host politeness state is owned by each fetcher instance now, so
+    there are no module globals to reset between tests; the only shared
+    noise the fetcher reads is the contact environment variable, and the
+    offline transports still need a real-looking one.
     """
-    monkeypatch.setattr(fetcher, "_ROBOTS_CACHE", {})
-    monkeypatch.setattr(fetcher, "_LAST_FETCH_AT", {})
-    monkeypatch.setattr(fetcher, "_REQUEST_COUNTS", {})
-    monkeypatch.setattr(fetcher, "_DISCOVERY_CACHE", {})
-    # The fetcher refuses live requests under the placeholder contact; the
-    # offline transports still need a real-looking one.
     monkeypatch.setenv("FETCHER_CONTACT", "tests@open-law.invalid")
 
 

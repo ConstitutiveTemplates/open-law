@@ -3,10 +3,16 @@
 All tests use a fake httpx transport — no network. They prove the
 Good-future preflight: feed-first discovery, API hints, robots.txt, access
 denials, per-host budgets, rate limiting, and disk caching.
+
+Each test builds its own :class:`PoliteFetcher`, which owns its own
+per-host session state; there is no module-global fetcher state to reset
+between tests. The charter-level promises (robots before any request,
+one request per second per host) are asserted in ``test_charter.py``.
 """
 
 from __future__ import annotations
 
+import json
 import time
 from pathlib import Path
 
@@ -15,8 +21,8 @@ import pytest
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from dataclasses import replace
 
-from open_law import fetcher
 from open_law.fetcher import (
     AccessDeniedError,
     BudgetExceededError,
@@ -110,14 +116,6 @@ _DENY_SITE = _respond(_SiteShape(robots="User-agent: *\nDisallow: /private\nAllo
 _FORBIDDEN_SITE = _respond(_SiteShape(forbidden_paths=("/private",)))
 
 
-@pytest.fixture(autouse=True)
-def _fresh_state(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(fetcher, "_ROBOTS_CACHE", {})
-    monkeypatch.setattr(fetcher, "_LAST_FETCH_AT", {})
-    monkeypatch.setattr(fetcher, "_REQUEST_COUNTS", {})
-    monkeypatch.setattr(fetcher, "_DISCOVERY_CACHE", {})
-
-
 def test_fetch_text_returns_body(tmp_path: Path) -> None:
     config = FetchConfig(cache_dir=tmp_path / "cache", delay_seconds=0)
     with PoliteFetcher(config, client=_client(_NO_FEED_SITE)) as fetcher_:
@@ -189,18 +187,14 @@ def test_budget_counts_probes_and_pages(tmp_path: Path) -> None:
     config = FetchConfig(cache_dir=tmp_path / "cache", delay_seconds=0)
     with PoliteFetcher(config, client=_client(_NO_FEED_SITE)) as fetcher_:
         fetcher_.fetch_text("https://example.com/a")
-        count = fetcher._REQUEST_COUNTS.get("example.com", 0)
+        count = fetcher_.state.count_of("example.com")
         # HEAD probe + robots.txt + 8 feed probes (all 404) + page GET.
         assert count >= 1 + 1 + 8 + 1, f"probes must count, got {count}"
+        # Spend the budget exactly: the next request on this host, in this
+        # session, must be refused.
+        fetcher_.set_config(replace(config, max_requests_per_host=count))
         with pytest.raises(BudgetExceededError):
-            PoliteFetcher(
-                FetchConfig(
-                    cache_dir=tmp_path / "cache",
-                    delay_seconds=0,
-                    max_requests_per_host=count,
-                ),
-                client=_client(_NO_FEED_SITE),
-            ).preflight("https://example.com/b")
+            fetcher_.preflight("https://example.com/b")
 
 
 def test_rate_limit_sleeps_between_hosts(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -438,3 +432,209 @@ def test_contact_env_is_read_when_the_fetcher_is_built(monkeypatch: pytest.Monke
     monkeypatch.setenv("FETCHER_CONTACT", "late@open-law.invalid")
     assert "late@open-law.invalid" in FetchConfig().resolved_user_agent()
     assert "explicit@open-law.invalid" in FetchConfig(contact="explicit@open-law.invalid").resolved_user_agent()
+
+
+def test_default_cache_is_the_platform_user_cache() -> None:
+    """The cache lives in the platform user cache, not the working directory."""
+    cache_dir = FetchConfig().cache_dir
+    assert cache_dir.is_absolute()
+    assert "open-law" in cache_dir.parts
+    assert not str(cache_dir).startswith(".cache")
+
+
+def test_cache_key_includes_content_negotiation(tmp_path: Path) -> None:
+    """The same URL fetched as RDF and as HTML must not share a cache entry."""
+    requests: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request.url.path)
+        if request.url.path == "/robots.txt":
+            return httpx.Response(200, text="User-agent: *\nAllow: /\n")
+        if "rdf" in request.headers.get("accept", ""):
+            return httpx.Response(200, text="<rdf/>")
+        return httpx.Response(200, text="<html>hi</html>")
+
+    config = FetchConfig(cache_dir=tmp_path / "cache", delay_seconds=0)
+    url = "https://example.com/resource"
+    with PoliteFetcher(config, headers={"Accept": "application/rdf+xml"}, client=_client(handler)) as rdf:
+        assert rdf.fetch_text(url, discover=False) == "<rdf/>"
+    with PoliteFetcher(config, headers={"Accept": "text/html"}, client=_client(handler)) as html:
+        assert "hi" in html.fetch_text(url, discover=False)
+    # Two negotiations, two bodies: the HTML request did not get the RDF one.
+    assert requests.count("/resource") == 2
+    # …and repeating the RDF request is served from its own entry.
+    with PoliteFetcher(config, headers={"Accept": "application/rdf+xml"}, client=_client(handler)) as again:
+        assert again.fetch_text(url, discover=False) == "<rdf/>"
+    assert requests.count("/resource") == 2
+
+
+def test_bytes_fetch_caches_raw_bytes(tmp_path: Path) -> None:
+    """Binary bodies are cached verbatim: a PDF survives a cache round trip."""
+    payload = b"%PDF-1.4\n\x00\xff\xfe binary \x9c"
+    requests: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request.url.path)
+        if request.url.path == "/robots.txt":
+            return httpx.Response(200, text="User-agent: *\nAllow: /\n")
+        return httpx.Response(200, content=payload, headers={"content-type": "application/pdf"})
+
+    config = FetchConfig(cache_dir=tmp_path / "cache", delay_seconds=0)
+    with PoliteFetcher(config, client=_client(handler)) as fetcher_:
+        first = fetcher_.fetch_bytes("https://example.com/doc.pdf")
+        second = fetcher_.fetch_bytes("https://example.com/doc.pdf")
+    assert first == payload
+    assert second == payload  # byte-identical: no UTF-8 round trip
+    assert requests.count("/doc.pdf") == 1  # second call came from the cache
+
+
+def test_bytes_wayback_uses_the_raw_snapshot_url(tmp_path: Path) -> None:
+    """Wayback binaries come from the ``id_`` (unmodified) snapshot URL."""
+    payload = b"%PDF-1.4 archived"
+    seen: list[str] = []
+    wayback = json.dumps(
+        {
+            "archived_snapshots": {
+                "closest": {
+                    "available": True,
+                    "url": "https://web.archive.org/web/20200101000000/https://example.com/doc.pdf",
+                    "timestamp": "20200101000000",
+                }
+            }
+        }
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        if request.url.path == "/robots.txt":
+            return httpx.Response(200, text="User-agent: *\nAllow: /\n")
+        if request.url.host == "archive.org":
+            return httpx.Response(200, text=wayback, headers={"content-type": "application/json"})
+        if request.url.host == "web.archive.org":
+            return httpx.Response(200, content=payload)
+        return httpx.Response(500, text="boom")
+
+    config = FetchConfig(cache_dir=tmp_path / "cache", delay_seconds=0, wayback_fallback=True)
+    with PoliteFetcher(config, client=_client(handler)) as fetcher_:
+        data = fetcher_.fetch_bytes("https://example.com/doc.pdf")
+    assert data == payload
+    snapshot_urls = [url for url in seen if "web.archive.org" in url]
+    assert snapshot_urls == ["https://web.archive.org/web/20200101000000id_/https://example.com/doc.pdf"], snapshot_urls
+    assert fetcher_.last_result is not None
+    assert fetcher_.last_result.from_wayback is True
+    assert list((tmp_path / "cache").glob("*.bin")), "the archived bytes must be cached"
+
+
+def test_bytes_fetch_denied_caches_nothing(tmp_path: Path) -> None:
+    """A 403 on a binary is denied access, and no body is cached."""
+    config = FetchConfig(cache_dir=tmp_path / "cache", delay_seconds=0)
+    with (
+        PoliteFetcher(config, client=_client(_FORBIDDEN_SITE)) as fetcher_,
+        pytest.raises(AccessDeniedError),
+    ):
+        fetcher_.fetch_bytes("https://example.com/private", discover=False)
+    assert list((tmp_path / "cache").glob("*.bin")) == []
+
+
+def test_bytes_fetch_transport_error_raises_with_wayback_off(tmp_path: Path) -> None:
+    """Without ``wayback_fallback`` a dead binary fetch raises, unretried."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/robots.txt":
+            return httpx.Response(200, text="User-agent: *\nAllow: /\n")
+        raise httpx.ConnectError("connection reset", request=request)
+
+    config = FetchConfig(cache_dir=tmp_path / "cache", delay_seconds=0)
+    with (
+        PoliteFetcher(config, client=_client(handler)) as fetcher_,
+        pytest.raises(httpx.ConnectError),
+    ):
+        fetcher_.fetch_bytes("https://example.com/doc.pdf", discover=False)
+
+
+def test_unusable_cache_directory_still_fetches(tmp_path: Path) -> None:
+    """A cache that cannot be written (a read-only checkout) is not fatal."""
+    blocked = tmp_path / "cache"
+    blocked.write_text("a file where the cache directory should be", encoding="utf-8")
+    config = FetchConfig(cache_dir=blocked, delay_seconds=0)
+    with PoliteFetcher(config, client=_client(_NO_FEED_SITE)) as fetcher_:
+        assert "hi" in fetcher_.fetch_text("https://example.com/a", discover=False)
+        assert fetcher_.fetch_bytes("https://example.com/a", discover=False) == b"<html><title>hi</title></html>"
+
+
+def test_damaged_cache_entries_are_misses(tmp_path: Path) -> None:
+    """A damaged cache file means "fetch it again", never a crash."""
+    requests: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request.url.path)
+        if request.url.path == "/robots.txt":
+            return httpx.Response(200, text="User-agent: *\nAllow: /\n")
+        return httpx.Response(200, text="hi")
+
+    config = FetchConfig(cache_dir=tmp_path / "cache", delay_seconds=0)
+    with PoliteFetcher(config, client=_client(handler)) as fetcher_:
+        assert "hi" in fetcher_.fetch_text("https://example.com/a", discover=False)
+        entry = next((tmp_path / "cache").glob("*.json"))
+        for damaged in ("not json at all", '["a", "list"]', '{"fetched_at": 1, "text": 42}'):
+            entry.write_text(damaged, encoding="utf-8")
+            assert "hi" in fetcher_.fetch_text("https://example.com/a", discover=False)
+    assert requests.count("/a") == 4  # the first fetch, then one per damaged entry
+
+
+def test_wayback_text_is_cached_under_the_negotiation_key(tmp_path: Path) -> None:
+    """A snapshot body is cached like any other fetch, headers included."""
+    payload = "<html>archived</html>"
+    requests: list[str] = []
+    wayback = json.dumps(
+        {
+            "archived_snapshots": {
+                "closest": {
+                    "available": True,
+                    "url": "https://web.archive.org/web/20200101000000/https://example.com/page",
+                    "timestamp": "20200101000000",
+                }
+            }
+        }
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(str(request.url))
+        if request.url.path == "/robots.txt":
+            return httpx.Response(200, text="User-agent: *\nAllow: /\n")
+        if request.url.host == "archive.org":
+            return httpx.Response(200, text=wayback, headers={"content-type": "application/json"})
+        if request.url.host == "web.archive.org":
+            return httpx.Response(200, text=payload)
+        return httpx.Response(500, text="boom")
+
+    config = FetchConfig(cache_dir=tmp_path / "cache", delay_seconds=0, wayback_fallback=True)
+    with PoliteFetcher(config, headers={"Accept": "text/html"}, client=_client(handler)) as fetcher_:
+        first = fetcher_.fetch_text("https://example.com/page", discover=False)
+        second = fetcher_.fetch_text("https://example.com/page", discover=False)
+    assert "archived" in first
+    assert second == first  # served from the cache written for this Accept
+    assert sum("web.archive.org" in url for url in requests) == 1
+
+
+def test_two_fetchers_do_not_share_host_state(tmp_path: Path) -> None:
+    """Session state is per instance: no cross-talk between fetchers."""
+    robots_requests: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        robots_requests.append(str(request.url))
+        if request.url.path == "/robots.txt":
+            return httpx.Response(200, text="User-agent: *\nAllow: /\n")
+        return httpx.Response(200, text="hi")
+
+    first = PoliteFetcher(FetchConfig(cache_dir=tmp_path / "a", delay_seconds=0), client=_client(handler))
+    second = PoliteFetcher(FetchConfig(cache_dir=tmp_path / "b", delay_seconds=0), client=_client(handler))
+    with first:
+        first.fetch_text("https://example.com/a", discover=False)
+        assert first.state.count_of("example.com") == 2  # robots.txt + page
+        assert second.state.count_of("example.com") == 0
+        with second:
+            second.fetch_text("https://example.com/a", discover=False)
+    # Each fetcher read robots.txt for itself: the parser is instance state.
+    assert robots_requests.count("https://example.com/robots.txt") == 2
+    assert second.state.count_of("example.com") == 2

@@ -105,13 +105,20 @@ def cmd_correspond(
     if not candidates:
         print("no candidate correspondences found — this means no candidate pairs, not that the laws do not correspond")
         return
-    print("candidates for human review (similarity is title-based, not equivalence):")
+    print(
+        "candidates for human review — a candidate is not an equivalence; "
+        "similarity is title-based and only computed within one language "
+        "(bridge = scored through an English translation, topic+era = unscored)"
+    )
     for candidate in candidates:
+        similarity = f"{candidate.similarity:.3f}" if candidate.similarity is not None else "  n/a"
         print(
-            f"{candidate.similarity:.3f}  [{candidate.topic}] "
+            f"{similarity}  [{candidate.topic}] {candidate.basis}  "
             f"{candidate.jurisdiction_a} {candidate.year_a or ''} {candidate.title_a!r}"
+            f" (matched: {', '.join(candidate.terms_a) or 'expert annotation'})"
             f"  <->  "
             f"{candidate.jurisdiction_b} {candidate.year_b or ''} {candidate.title_b!r}"
+            f" (matched: {', '.join(candidate.terms_b) or 'expert annotation'})"
         )
 
 

@@ -14,24 +14,39 @@ from __future__ import annotations
 import os
 import urllib.parse
 from dataclasses import dataclass
+from dataclasses import field
 from pathlib import Path
 from typing import Self
+
+import platformdirs
 
 __all__ = [
     "CONTACT_PLACEHOLDER",
     "AccessDeniedError",
     "BudgetExceededError",
     "ContactRequiredError",
+    "FetchBytesResult",
     "FetchConfig",
     "FetchResult",
     "FetchTextResult",
     "Preflight",
     "RobotDeniedError",
     "access_denied_error",
+    "default_cache_dir",
     "http_parts",
 ]
 
 CONTACT_PLACEHOLDER = "contact@example.com"
+
+
+def default_cache_dir() -> Path:
+    """The platform user-cache directory holding fetched responses.
+
+    A run-directory-relative ``.cache/fetcher`` scattered one cache per
+    working directory (and dropped harvest data into checkouts); the user
+    cache is one shared, git-ignored location per machine.
+    """
+    return platformdirs.user_cache_path("open-law") / "fetch"
 
 
 class RobotDeniedError(ValueError):
@@ -111,7 +126,7 @@ class FetchConfig:
     delay_seconds: float = 1.0
     timeout_seconds: float = 10.0
     cache_ttl_seconds: float = 24 * 3600
-    cache_dir: Path = Path(".cache/fetcher")
+    cache_dir: Path = field(default_factory=default_cache_dir)
     user_agent: str = ""
     max_requests_per_host: int = 100
     wayback_fallback: bool = False
@@ -141,6 +156,21 @@ class FetchResult:
     """Result of a polite fetch, with Wayback provenance when used."""
 
     text: str
+    url: str
+    from_wayback: bool = False
+    wayback_url: str | None = None
+    wayback_timestamp: str | None = None
+
+
+@dataclass(frozen=True)
+class FetchBytesResult:
+    """Result of a polite binary fetch, with Wayback provenance when used.
+
+    Binary payloads carry ``data`` instead of ``text``: the whole point of
+    the bytes path is that a PDF is never decoded and re-encoded.
+    """
+
+    data: bytes
     url: str
     from_wayback: bool = False
     wayback_url: str | None = None

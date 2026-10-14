@@ -15,7 +15,9 @@ from open_law.sources import ADAPTERS
 from open_law.sources import open_adapter
 
 # Cheap, stable ids verified against captured fixtures and the live
-# endpoints (small pages, ~one request each).
+# endpoints (small pages, ~one request each). Every registered adapter
+# needs one: the probe set is the registry, and a missing id would turn
+# into a silent skip in the weekly health report.
 _LIVE_IDS: dict[str, str] = {
     "bd": "43",
     "ca": "P-8.6",
@@ -26,10 +28,22 @@ _LIVE_IDS: dict[str, str] = {
     "kr": "2100000000000",  # dummy — skipped unless LAW_KR_OC is set
     "la": "2143",
     "mv": "291",
+    "np": "13535",
     "uk": "ukcm/2023/1",
     "us-ecfr": "title-16/part-312/section-312.5",
     "us-tx": "BC.503",
 }
+
+
+def test_every_registered_adapter_has_a_live_probe_id() -> None:
+    """The live probe set is the registry: a new adapter needs a probe id.
+
+    Otherwise the weekly adapter-health run would skip it silently, and a
+    break at that source would go unnoticed — which is the one thing the
+    health check exists to prevent.
+    """
+    missing = sorted(set(ADAPTERS) - set(_LIVE_IDS))
+    assert not missing, f"registered adapters without a live probe id: {missing}"
 
 
 @pytest.mark.live

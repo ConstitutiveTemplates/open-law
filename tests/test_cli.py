@@ -278,6 +278,7 @@ def _budget_stopping_adapter(tmp_path: Path) -> SourceAdapter:
     class _BudgetStub(SourceAdapter):
         source_id = "budgetstub"
         name = "Budget stub"
+        channel = "legislation"
         jurisdiction = "XX"
         homepage = "https://example.com"
         license_note = "test"
@@ -292,6 +293,7 @@ def _budget_stopping_adapter(tmp_path: Path) -> SourceAdapter:
             return Law(
                 source=self.source_id,
                 jurisdiction=self.jurisdiction,
+                channel=self.channel,
                 law_id=law_id,
                 title=f"law {law_id}",
             )

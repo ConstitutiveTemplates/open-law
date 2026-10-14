@@ -35,7 +35,8 @@ def build_parser() -> ArgumentParser:
     subparsers.add_parser("sources", help="list the registered jurisdiction adapters")
 
     preflight_parser = subparsers.add_parser(
-        "preflight", help="judge a URL (feed/API/robots/budget) without fetching it"
+        "preflight",
+        help="judge a URL (robots/access/feed/API/budget) via polite probes: robots.txt, HEAD, feed/API discovery",
     )
     preflight_parser.add_argument("url", help="the URL to judge")
 

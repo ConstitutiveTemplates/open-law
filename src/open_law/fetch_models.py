@@ -21,6 +21,7 @@ __all__ = [
     "CONTACT_PLACEHOLDER",
     "AccessDeniedError",
     "BudgetExceededError",
+    "ContactRequiredError",
     "FetchConfig",
     "FetchResult",
     "FetchTextResult",
@@ -51,6 +52,15 @@ class BudgetExceededError(ValueError):
     What is polite at 10 requests is a DDoS at 10 000. Stop, file an issue
     describing the crawl size, and get review before raising
     ``max_requests_per_host``.
+    """
+
+
+class ContactRequiredError(ValueError):
+    """Raised before a live request when the contact is still the placeholder.
+
+    The charter requires a reachable contact in the User-Agent so a site
+    operator can tell you to slow down. Set ``FETCHER_CONTACT`` (or pass
+    ``FetchConfig(contact=...)``) before fetching.
     """
 
 
@@ -95,7 +105,9 @@ class FetchConfig:
     """Tuning knobs for :class:`open_law.fetcher.PoliteFetcher`."""
 
     project_name: str = "open-law"
-    contact: str = os.environ.get("FETCHER_CONTACT", CONTACT_PLACEHOLDER)
+    # Empty means "read FETCHER_CONTACT when a fetcher is built" — never at
+    # import time, so setting the variable later in the process still works.
+    contact: str = ""
     delay_seconds: float = 1.0
     timeout_seconds: float = 10.0
     cache_ttl_seconds: float = 24 * 3600
@@ -104,11 +116,24 @@ class FetchConfig:
     max_requests_per_host: int = 100
     wayback_fallback: bool = False
 
+    def resolved_contact(self) -> str:
+        """The explicit contact, else ``FETCHER_CONTACT``, else the placeholder."""
+        return self.contact or os.environ.get("FETCHER_CONTACT", "") or CONTACT_PLACEHOLDER
+
     def resolved_user_agent(self) -> str:
         """Contactable User-Agent identifying this project."""
         if self.user_agent:
             return self.user_agent
-        return f"{self.project_name}/0.1 (+mailto:{self.contact})"
+        return f"{self.project_name}/0.1 (+mailto:{self.resolved_contact()})"
+
+    def require_contact(self) -> None:
+        """Raise :class:`ContactRequiredError` while the User-Agent has no real contact."""
+        if CONTACT_PLACEHOLDER in self.resolved_user_agent():
+            msg = (
+                f"refusing to fetch with the placeholder contact {CONTACT_PLACEHOLDER!r}: "
+                "set FETCHER_CONTACT to an address site operators can reach"
+            )
+            raise ContactRequiredError(msg)
 
 
 @dataclass(frozen=True)

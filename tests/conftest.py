@@ -44,6 +44,9 @@ def _fresh_fetcher_state(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(fetcher, "_LAST_FETCH_AT", {})
     monkeypatch.setattr(fetcher, "_REQUEST_COUNTS", {})
     monkeypatch.setattr(fetcher, "_DISCOVERY_CACHE", {})
+    # The fetcher refuses live requests under the placeholder contact; the
+    # offline transports still need a real-looking one.
+    monkeypatch.setenv("FETCHER_CONTACT", "tests@open-law.invalid")
 
 
 @pytest.fixture

@@ -20,6 +20,7 @@ from open_law import fetcher
 from open_law.fetcher import (
     AccessDeniedError,
     BudgetExceededError,
+    ContactRequiredError,
     FetchConfig,
     PoliteFetcher,
     RobotDeniedError,
@@ -303,3 +304,137 @@ def test_extra_headers_reach_the_transport(tmp_path: Path) -> None:
         fetcher_.fetch_text("https://example.com/resource", discover=False)
     assert seen["accept"] == "application/rdf+xml"
     assert "open-law" in seen["user-agent"]
+
+
+def _recorded(
+    site: Callable[[httpx.Request], httpx.Response], events: list[tuple[str, str, str]]
+) -> Callable[[httpx.Request], httpx.Response]:
+    """Wrap *site*, appending ("send", host, path) for every request."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        events.append(("send", request.url.host, request.url.path))
+        return site(request)
+
+    return handler
+
+
+def _record_waits(monkeypatch: pytest.MonkeyPatch, events: list[tuple[str, str, str]]) -> None:
+    """Record ("wait", host, "") whenever the fetcher waits for a host slot."""
+    original = PoliteFetcher._wait_for_slot
+
+    def waiting(self: PoliteFetcher, host: str) -> None:
+        events.append(("wait", host, ""))
+        original(self, host)
+
+    monkeypatch.setattr(PoliteFetcher, "_wait_for_slot", waiting)
+
+
+def test_preflight_sends_nothing_before_robots(tmp_path: Path) -> None:
+    """robots.txt is each host's first request — the api. host included."""
+    events: list[tuple[str, str, str]] = []
+    config = FetchConfig(cache_dir=tmp_path / "cache", delay_seconds=0)
+    with PoliteFetcher(config, client=_client(_recorded(_NO_FEED_API_SITE, events))) as fetcher_:
+        judged = fetcher_.preflight("https://example.com/items/1")
+    assert judged.api_hint == "https://api.example.com/"
+    first_path: dict[str, str] = {}
+    for _, host, path in events:
+        first_path.setdefault(host, path)
+    assert first_path == {"example.com": "/robots.txt", "api.example.com": "/robots.txt"}
+
+
+def test_preflight_robots_denial_sends_no_probe(tmp_path: Path) -> None:
+    """A disallowed path is refused before the HEAD probe goes out."""
+    events: list[tuple[str, str, str]] = []
+    config = FetchConfig(cache_dir=tmp_path / "cache", delay_seconds=0)
+    with (
+        PoliteFetcher(config, client=_client(_recorded(_DENY_SITE, events))) as fetcher_,
+        pytest.raises(RobotDeniedError),
+    ):
+        fetcher_.preflight("https://example.com/private/secret")
+    assert events == [("send", "example.com", "/robots.txt")]
+
+
+def test_every_request_waits_for_its_host_slot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Discovery probes are rate-limited too: each send follows a wait."""
+    events: list[tuple[str, str, str]] = []
+    _record_waits(monkeypatch, events)
+    config = FetchConfig(cache_dir=tmp_path / "cache", delay_seconds=0)
+    with PoliteFetcher(config, client=_client(_recorded(_NO_FEED_SITE, events))) as fetcher_:
+        fetcher_.fetch_text("https://example.com/page")
+    sends = [index for index, event in enumerate(events) if event[0] == "send"]
+    # robots + HEAD + 8 feed GETs + API probes + page GET.
+    assert len(sends) > 1 + 1 + 8 + 1
+    for index in sends:
+        assert index > 0
+        assert events[index - 1] == ("wait", events[index][1], ""), events[index - 1 : index + 1]
+
+
+def test_robots_disallowed_probes_are_never_sent(tmp_path: Path) -> None:
+    """Discovery skips feed paths and api. hosts that robots.txt denies."""
+    events: list[tuple[str, str, str]] = []
+
+    def site(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/robots.txt":
+            if request.url.host == "api.example.com":
+                return httpx.Response(200, text="User-agent: *\nDisallow: /\n")
+            return httpx.Response(200, text="User-agent: *\nDisallow: /feed\nAllow: /\n")
+        return _FEED_SITE(request)
+
+    config = FetchConfig(cache_dir=tmp_path / "cache", delay_seconds=0)
+    with PoliteFetcher(config, client=_client(_recorded(site, events))) as fetcher_:
+        judged = fetcher_.preflight("https://example.com/page")
+    # "Disallow: /feed" is a prefix rule: /feed and /feed.xml are skipped.
+    assert judged.feed_url == "https://example.com/rss.xml"
+    assert not [path for _, _, path in events if path.startswith("/feed")]
+    assert [path for _, host, path in events if host == "api.example.com"] == ["/robots.txt"]
+
+
+def test_discovery_probe_transport_errors_are_skipped(tmp_path: Path) -> None:
+    """A failing probe (HEAD 4xx, then GET transport error) is not an API."""
+
+    def site(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/robots.txt":
+            return httpx.Response(200, text="User-agent: *\nAllow: /\n")
+        if request.url.path == "/api" and request.method == "GET":
+            msg = "connection reset"
+            raise httpx.ConnectError(msg, request=request)
+        return _NO_FEED_SITE(request)
+
+    config = FetchConfig(cache_dir=tmp_path / "cache", delay_seconds=0)
+    with PoliteFetcher(config, client=_client(site)) as fetcher_:
+        judged = fetcher_.preflight("https://example.com/page")
+    assert judged.api_hint is None
+
+
+def test_cache_hit_skips_rate_limit_wait(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A fully cached re-run must not sleep per item."""
+    sleeps: list[float] = []
+    monkeypatch.setattr(time, "sleep", sleeps.append)
+    config = FetchConfig(cache_dir=tmp_path / "cache", delay_seconds=60)
+    with PoliteFetcher(config, client=_client(_NO_FEED_SITE)) as fetcher_:
+        fetcher_.fetch_text("https://example.com/a", discover=False)
+        after_first = len(sleeps)
+        fetcher_.fetch_text("https://example.com/a", discover=False)
+        fetcher_.fetch_text("https://example.com/a", discover=False)
+    assert after_first == 1
+    assert len(sleeps) == after_first
+
+
+def test_placeholder_contact_refuses_live_fetch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """No request leaves while the User-Agent carries contact@example.com."""
+    monkeypatch.delenv("FETCHER_CONTACT", raising=False)
+    events: list[tuple[str, str, str]] = []
+    config = FetchConfig(cache_dir=tmp_path / "cache", delay_seconds=0)
+    with (
+        PoliteFetcher(config, client=_client(_recorded(_NO_FEED_SITE, events))) as fetcher_,
+        pytest.raises(ContactRequiredError, match="FETCHER_CONTACT"),
+    ):
+        fetcher_.fetch_text("https://example.com/a", discover=False)
+    assert events == []
+
+
+def test_contact_env_is_read_when_the_fetcher_is_built(monkeypatch: pytest.MonkeyPatch) -> None:
+    """FETCHER_CONTACT set after import still reaches the User-Agent."""
+    monkeypatch.setenv("FETCHER_CONTACT", "late@open-law.invalid")
+    assert "late@open-law.invalid" in FetchConfig().resolved_user_agent()
+    assert "explicit@open-law.invalid" in FetchConfig(contact="explicit@open-law.invalid").resolved_user_agent()

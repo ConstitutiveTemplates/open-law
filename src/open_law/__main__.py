@@ -3,8 +3,9 @@
 Subcommands cover the source-adapter workflow end to end:
 
 - ``sources``: list the registered jurisdiction adapters;
-- ``preflight URL``: the fetcher's judgement about a URL (feed, API,
-  robots, budget) without fetching anything;
+- ``preflight URL``: the fetcher's judgement about a URL (robots,
+  access, feed, API, budget) — it sends polite, rate-limited probes:
+  robots.txt, a HEAD of the URL, and feed/API discovery requests;
 - ``search SOURCE QUERY``: title-search one source's law list;
 - ``fetch SOURCE LAW_ID``: fetch one law and print it as JSON;
 - ``text SOURCE LAW_ID``: print the law's full text as plain text;

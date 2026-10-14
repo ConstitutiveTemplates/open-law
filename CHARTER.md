@@ -31,10 +31,17 @@ if you break one, the checks fail first.
   `BudgetExceededError`:
   what is polite at 10 requests is a DDoS at 10 000 — stop and ask before
   scaling up. Scrapy's `AUTOTHROTTLE` / `DOWNLOAD_DELAY` and memorious'
-  `http_rate_limit` carry the same rule for their engines.
-- **Cache aggressively.** GET responses live under `.cache/fetcher/` for a
-  day; re-runs and tests must never refetch what is already cached, and a
-  cache hit does not wait for a rate-limit slot.
+  `http_rate_limit` carry the same rule for their engines. The knobs are
+  reachable from the CLI (`--budget`, `--delay`, `--contact`), and a
+  `dump` that hits the budget writes what it fetched and tells you how to
+  resume instead of throwing the batch away.
+- **Cache aggressively.** GET responses live in the platform user cache
+  (`FetchConfig.cache_dir`, default `<user cache>/open-law/fetch`) for a
+  day, keyed by the URL *and* the request's content-negotiation headers,
+  so an EUR-Lex RDF fetch is never served an HTML body. Text and binary
+  bodies are cached separately: a PDF is stored as bytes and never
+  round-tripped through UTF-8. Re-runs and tests must never refetch what
+  is already cached, and a cache hit does not wait for a rate-limit slot.
 - **Identify yourself.** The `User-Agent` always carries this project's name
   plus a contact address (`FETCHER_CONTACT`) so the operator can reach you.
   While it is still the `contact@example.com` placeholder, the fetcher
@@ -66,3 +73,22 @@ if you break one, the checks fail first.
 - **Ask before scaling up.** A polite single-host crawl is the default. Mass
   crawls, distributed queues, and proxy rotation need explicit review (open
   an issue first) — what is polite at 1 req/s is a DDoS at 1000 req/s.
+
+## 4. The charter is tested, not promised
+
+§1 is not prose about good intentions: each promise has a test that fails
+when the code stops honouring it. They live in `tests/test_charter.py`;
+run them with `just test` or `uv run pytest tests/test_charter.py`.
+
+| Promise | Test |
+|---|---|
+| robots.txt is read before any other request to a host | `test_no_request_precedes_the_robots_check` |
+| a robots.txt refusal stops the crawl | `test_robots_denial_stops_the_crawl` |
+| at most one request per second per host, probes included | `test_requests_per_host_never_exceed_one_per_second` |
+| robots.txt, HEAD and discovery probes count against the budget | `test_robots_head_and_discovery_count_toward_the_budget` |
+| the defaults carry the charter's numbers; a cached body skips the wait | `test_defaults_are_the_charter_defaults` |
+| the placeholder contact refuses the request outright | `test_placeholder_contact_refuses_the_request` |
+
+`tests/test_scraping.py` covers the same ground per mechanism (feed-first
+discovery, access denial, one send path, binary caching); the tests above
+are the charter's own copy, written to be read next to the rules.

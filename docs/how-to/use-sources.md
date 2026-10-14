@@ -164,8 +164,14 @@ $ uv run open-law dump bd --ids-from bd-act-ids.txt --out laws.jsonl
 $ grep -oE 'act-details-[0-9]+' index.html | cut -d- -f3 | uv run open-law dump bd --ids-from - -o laws.jsonl
 ```
 
-Fetches happen before the file is created, so a failing id never leaves
-a partial file behind. JSONL is the interchange format for the
+A failure that is not the host budget (a missing act, a denied page)
+leaves no partial file behind. Hitting the budget does keep the work:
+the dump writes what it fetched, reports `host budget reached after N of
+M law(s)`, saves the ids it never reached to `<out>.remaining`, and
+prints the command that resumes the run (`--ids-from <out>.remaining
+--budget <higher>`). Because everything written is cached, the resumed
+run only pays for the ids that are still missing.
+JSONL is the interchange format for the
 consolidation pipeline: jq, DuckDB (`read_jsonl`), and pandas all read
 it directly.
 
@@ -187,7 +193,11 @@ Each adapter class declares its own `crawl_delay_seconds` (mirroring
 the source's robots.txt `Crawl-delay`, such as legislation.gov.uk's 5)
 and `http_headers` (CELLAR's content negotiation). The CLI builds the
 default fetcher from those declarations, so every request is polite by
-construction; responses are cached under `.cache/fetcher/` for a day.
+construction; responses are cached in the platform user cache
+(`<user cache>/open-law/fetch`) for a day, keyed by the URL and the
+negotiation headers. `--budget`, `--delay` and `--contact` override the
+per-host request budget, the delay and the contact address on any
+fetching command.
 
 ## Fetch budgets
 

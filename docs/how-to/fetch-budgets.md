@@ -61,17 +61,50 @@ us_adapter = open_adapter("us")  # default_fetcher already uses EcfrAdapter.craw
 
 ## Bulk-dump math
 
-Wall time for a bulk `dump` is essentially `N × delay_seconds` (one polite GET
-per id, plus the constant robots/discovery probe per host — cached after the
-first page on each origin):
+The budget counts **requests**, not laws, and the overhead lands before the
+first law is written. A cold origin costs up to 14 requests — robots.txt
+(1), the preflight HEAD probe (1), up to 8 feed probes and 3 API probes,
+plus robots.txt for the `api.` host — so a first `dump` writes about **86
+laws** out of a 100-request budget. A later run (bodies cached, fresh
+process) costs robots.txt plus one GET per law: **99 laws**. Adapter
+fetches skip discovery entirely (`discover=False`), so within one process
+each further page is one request.
 
-- `np` at 10 s × 100 requests = 1 000 s ≈ **16 min 40 s per 100 ids**
-- `uk` at 5 s × 100 requests = 500 s ≈ 8 min 20 s per 100 ids
-- `bd`/`ca`/`de`/`us-tx`/`la` at 2 s × 100 = 200 s ≈ 3 min 20 s per 100 ids
-- defaults at 1 s × 100 = 100 s ≈ 1 min 40 s per 100 ids
+Wall time for a bulk `dump` is `requests × delay_seconds`:
 
-The on-disk cache (`cache_dir=.cache/fetcher`, TTL 1 day) makes re-runs free.
+- `np` at 10 s × 100 requests = 1 000 s ≈ **16 min 40 s per 100 requests (~86–99 ids)**
+- `uk` at 5 s × 100 requests = 500 s ≈ 8 min 20 s
+- `bd`/`ca`/`de`/`us-tx`/`la` at 2 s × 100 = 200 s ≈ 3 min 20 s
+- defaults at 1 s × 100 = 100 s ≈ 1 min 40 s
+
+Raise the budget for a large harvest — the politeness rules are per host
+per session, so a bigger budget is a deliberate decision, not a bug:
+
+```console
+$ uv run open-law dump uk --ids-from uk-ids.txt --out laws.jsonl --budget 1000 --delay 5
+$ uv run open-law fetch uk ukcm/2023/1 --contact you@example.org
+```
+
+When the budget runs out mid-batch, the dump keeps what it fetched, reports
+`host budget reached after N of M law(s)`, writes the ids it never reached
+to `laws.jsonl.remaining`, and prints the command that resumes the run:
+
+```console
+$ uv run open-law fetch uk ukcm/2023/1 --out laws.jsonl  # stopped at the budget
+open-law: host budget reached after 86 of 120 law(s); 34 id(s) not fetched
+open-law: resume with: open-law dump uk --ids-from laws.jsonl.remaining --out laws.jsonl --budget 200
+```
+
+Resuming is cheap: everything already written is in the cache, so the
+second run only pays for the ids it still needs.
+
+The on-disk cache lives in the platform user cache
+(`FetchConfig.cache_dir`, `<user cache>/open-law/fetch` by default, TTL 1
+day) and is keyed by the URL *and* the request's content-negotiation
+headers, so CELLAR's RDF and HTML bodies never collide. Re-runs are free.
 When a site returns 5xx or is transiently unreachable, `FetchConfig(wayback_fallback=True)`
 and `open-law fetch --wayback` fall back to `https://archive.org/wayback/available?url=`
-(4xx never falls back — the charter forbids bypassing access control). See
+(4xx never falls back — the charter forbids bypassing access control); the
+snapshot is fetched through its raw `id_` URL, so a PDF comes back as the
+archived file rather than a re-encoded page. See
 [`use-sources.md`](use-sources.md#fetch-budgets) for the CLI side.

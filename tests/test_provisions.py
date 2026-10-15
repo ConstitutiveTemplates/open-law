@@ -7,9 +7,10 @@ ancestors joined with ``__``), ``num`` is the number as printed,
 children, ``children`` the nested provisions in document order.
 
 Only uk, jp and eu are in scope: the other adapters' channels serve
-flat HTML/PDF/TMX with no article structure worth parsing. eu's
-CELLAR response is metadata-only, so its provisions are pinned empty
-(the RDF graph carries no article text). No test touches the network.
+flat HTML/PDF/TMX with no article structure worth parsing. eu
+parses the CELLAR XHTML rendition's ``div.eli-subdivision#art_N``
+articles (a 404 rendition leaves provisions empty). No test touches
+the network.
 """
 
 from __future__ import annotations
@@ -118,13 +119,40 @@ def test_jp_law_without_articles_has_no_provisions(
     assert law.provisions == ()
 
 
-def test_eu_metadata_has_no_provisions(
+def test_eu_articles_parse_with_paragraphs(
     offline: Offline, recording_site: RecordingSite, fixture_text: FixtureLoader
 ) -> None:
-    """CELLAR serves a metadata graph, not article text — EU provisions stay empty."""
+    """CELLAR's XHTML rendition parses into articles with paragraph children."""
     adapter = offline(
         EurlexAdapter,
-        recording_site({"/resource/celex/32022R2065": fixture_text("eu_celex_32022R2065.rdf")}, []),
+        recording_site(
+            {
+                "/resource/celex/32022R2065": fixture_text("eu_celex_32022R2065.rdf"),
+                "/resource/celex/32022R2065.ENG.xhtml": fixture_text("eu_celex_32022R2065_articles.xhtml"),
+            },
+            [],
+        ),
     )
     law = adapter.fetch("32022R2065")
-    assert law.provisions == ()
+    assert [p.id for p in law.provisions] == ["art_1", "art_2", "art_8"]
+    first, second, bare = law.provisions
+    assert first.num == "Article 1"
+    assert first.heading == "Subject matter"
+    assert [c.id for c in first.children] == ["art_1__para_1", "art_1__para_2"]
+    assert "proper functioning of the internal market" in first.children[0].text
+    assert [i.id for i in first.children[1].children] == ["art_1__para_2__item_1", "art_1__para_2__item_2"]
+    assert "conditional exemption from liability" in first.children[1].children[0].text
+    # Own text excludes paragraph children: article 1's intro block has none of its own.
+    assert first.text == ""
+    # Bare paragraphs and item tables are article own text, not children:
+    # children are the numbered paragraph blocks alone.
+    assert second.num == "Article 2"
+    assert "introductory note" in second.text
+    assert "(a) an introductory definition;" in second.text
+    assert [c.id for c in second.children] == ["art_2__para_1"]
+    assert bare.heading == "No general monitoring obligations"
+    assert bare.children == ()
+    assert "No general obligation" in bare.text
+    # eId convention: underscores, never the source's dots/dashes; unique across the tree.
+    all_ids = [eid for p in law.provisions for eid in _eids(p)]
+    assert len(set(all_ids)) == len(all_ids)

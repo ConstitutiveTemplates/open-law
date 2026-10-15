@@ -12,7 +12,7 @@
         <meta name="author" content="kashi-x">
       
       
-        <link rel="canonical" href="https://kasi-x.github.io/open-law/how-to/fetch-budgets/">
+        <link rel="canonical" href="https://politeuma.github.io/open-law/main/how-to/fetch-budgets/">
       
       
       
@@ -170,13 +170,13 @@
     
     <div class="md-header__source">
       
-        <a href="https://github.com/kasi-x/open-law" title="Go to repository" class="md-source" data-md-component="source">
+        <a href="https://github.com/politeuma/open-law" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
   </div>
   <div class="md-source__repository">
-    kasi-x/open-law
+    politeuma/open-law
   </div>
 </a>
       
@@ -216,13 +216,13 @@
   </label>
   
     <div class="md-nav__source">
-      <a href="https://github.com/kasi-x/open-law" title="Go to repository" class="md-source" data-md-component="source">
+      <a href="https://github.com/politeuma/open-law" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
   </div>
   <div class="md-source__repository">
-    kasi-x/open-law
+    politeuma/open-law
   </div>
 </a>
     </div>
@@ -747,7 +747,7 @@ unless the site is known-slow or known-large.</p>
 <td style="text-align: right;">86400</td>
 </tr>
 <tr>
-<td><code>us</code></td>
+<td><code>us-ecfr</code></td>
 <td>EcfrAdapter</td>
 <td style="text-align: right;">1.0</td>
 <td style="text-align: right;">100</td>
@@ -772,26 +772,55 @@ is conservative. <code>uk</code> mirrors <code>Crawl-delay: 5</code>. Others sta
 <p>Example — a 10 s fetcher for Nepal, a 1 s fetcher for eCFR:</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">open_law.fetcher</span><span class="w"> </span><span class="kn">import</span> <span class="n">FetchConfig</span><span class="p">,</span> <span class="n">PoliteFetcher</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">open_law.sources.np</span><span class="w"> </span><span class="kn">import</span> <span class="n">NepalLawCommissionAdapter</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">open_law.sources.us</span><span class="w"> </span><span class="kn">import</span> <span class="n">EcfrAdapter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">open_law.sources.us_ecfr</span><span class="w"> </span><span class="kn">import</span> <span class="n">EcfrAdapter</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">open_law.sources</span><span class="w"> </span><span class="kn">import</span> <span class="n">open_adapter</span>
 
 <span class="n">np_adapter</span> <span class="o">=</span> <span class="n">open_adapter</span><span class="p">(</span><span class="s2">"np"</span><span class="p">,</span> <span class="n">fetcher</span><span class="o">=</span><span class="n">PoliteFetcher</span><span class="p">(</span><span class="n">FetchConfig</span><span class="p">(</span><span class="n">delay_seconds</span><span class="o">=</span><span class="n">NepalLawCommissionAdapter</span><span class="o">.</span><span class="n">crawl_delay_seconds</span><span class="p">)))</span>
-<span class="n">us_adapter</span> <span class="o">=</span> <span class="n">open_adapter</span><span class="p">(</span><span class="s2">"us"</span><span class="p">)</span>  <span class="c1"># default_fetcher already uses EcfrAdapter.crawl_delay_seconds</span>
+<span class="n">us_adapter</span> <span class="o">=</span> <span class="n">open_adapter</span><span class="p">(</span><span class="s2">"us-ecfr"</span><span class="p">)</span>  <span class="c1"># default_fetcher already uses EcfrAdapter.crawl_delay_seconds</span>
 </code></pre></div>
 <h2 id="bulk-dump-math">Bulk-dump math<a class="headerlink" href="#bulk-dump-math" title="Permanent link">&para;</a></h2>
-<p>Wall time for a bulk <code>dump</code> is essentially <code>N × delay_seconds</code> (one polite GET
-per id, plus the constant robots/discovery probe per host — cached after the
-first page on each origin):</p>
+<p>The budget counts <strong>requests</strong>, not laws, and the overhead lands before the
+first law is written. A cold origin costs up to 14 requests — robots.txt
+(1), the preflight HEAD probe (1), up to 8 feed probes and 3 API probes,
+plus robots.txt for the <code>api.</code> host — so a first <code>dump</code> writes about <strong>86
+laws</strong> out of a 100-request budget. A later run (bodies cached, fresh
+process) costs robots.txt plus one GET per law: <strong>99 laws</strong>. Adapter
+fetches skip discovery entirely (<code>discover=False</code>), so within one process
+each further page is one request — except <code>eu</code>, whose <code>fetch</code> makes two
+polite requests per CELEX number (the RDF metadata graph and the English
+XHTML rendition the article tree comes from), each cached under its own
+<code>Accept</code>. A cold <code>eu</code> dump therefore writes about half as many ids per
+budget, and a 404 rendition costs the same two requests as a hit.</p>
+<p>Wall time for a bulk <code>dump</code> is <code>requests × delay_seconds</code>:</p>
 <ul>
-<li><code>np</code> at 10 s × 100 requests = 1 000 s ≈ <strong>16 min 40 s per 100 ids</strong></li>
-<li><code>uk</code> at 5 s × 100 requests = 500 s ≈ 8 min 20 s per 100 ids</li>
-<li><code>bd</code>/<code>ca</code>/<code>de</code>/<code>us-tx</code>/<code>la</code> at 2 s × 100 = 200 s ≈ 3 min 20 s per 100 ids</li>
-<li>defaults at 1 s × 100 = 100 s ≈ 1 min 40 s per 100 ids</li>
+<li><code>np</code> at 10 s × 100 requests = 1 000 s ≈ <strong>16 min 40 s per 100 requests (~86–99 ids)</strong></li>
+<li><code>uk</code> at 5 s × 100 requests = 500 s ≈ 8 min 20 s</li>
+<li><code>bd</code>/<code>ca</code>/<code>de</code>/<code>us-tx</code>/<code>la</code> at 2 s × 100 = 200 s ≈ 3 min 20 s</li>
+<li>defaults at 1 s × 100 = 100 s ≈ 1 min 40 s</li>
 </ul>
-<p>The on-disk cache (<code>cache_dir=.cache/fetcher</code>, TTL 1 day) makes re-runs free.
+<p>Raise the budget for a large harvest — the politeness rules are per host
+per session, so a bigger budget is a deliberate decision, not a bug:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>dump<span class="w"> </span>uk<span class="w"> </span>--ids-from<span class="w"> </span>uk-ids.txt<span class="w"> </span>--out<span class="w"> </span>laws.jsonl<span class="w"> </span>--budget<span class="w"> </span><span class="m">1000</span><span class="w"> </span>--delay<span class="w"> </span><span class="m">5</span>
+<span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>uk<span class="w"> </span>ukcm/2023/1<span class="w"> </span>--contact<span class="w"> </span>you@example.org
+</code></pre></div>
+<p>When the budget runs out mid-batch, the dump keeps what it fetched, reports
+<code>host budget reached after N of M law(s)</code>, writes the ids it never reached
+to <code>laws.jsonl.remaining</code>, and prints the command that resumes the run:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>uk<span class="w"> </span>ukcm/2023/1<span class="w"> </span>--out<span class="w"> </span>laws.jsonl<span class="w">  </span><span class="c1"># stopped at the budget</span>
+<span class="go">open-law: host budget reached after 86 of 120 law(s); 34 id(s) not fetched</span>
+<span class="go">open-law: resume with: open-law dump uk --ids-from laws.jsonl.remaining --out laws.jsonl --budget 200</span>
+</code></pre></div>
+<p>Resuming is cheap: everything already written is in the cache, so the
+second run only pays for the ids it still needs.</p>
+<p>The on-disk cache lives in the platform user cache
+(<code>FetchConfig.cache_dir</code>, <code>&lt;user cache&gt;/open-law/fetch</code> by default, TTL 1
+day) and is keyed by the URL <em>and</em> the request's content-negotiation
+headers, so CELLAR's RDF and HTML bodies never collide. Re-runs are free.
 When a site returns 5xx or is transiently unreachable, <code>FetchConfig(wayback_fallback=True)</code>
 and <code>open-law fetch --wayback</code> fall back to <code>https://archive.org/wayback/available?url=</code>
-(4xx never falls back — the charter forbids bypassing access control). See
+(4xx never falls back — the charter forbids bypassing access control); the
+snapshot is fetched through its raw <code>id_</code> URL, so a PDF comes back as the
+archived file rather than a re-encoded page. See
 <a href="../use-sources/#fetch-budgets"><code>use-sources.md</code></a> for the CLI side.</p>
 
 
@@ -834,7 +863,7 @@ and <code>open-law fetch --wayback</code> fall back to <code>https://archive.org
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Maintained by <a href="https://github.com/kasi-x/open-law">kashi-x</a>.
+      Maintained by <a href="https://github.com/politeuma/open-law">kashi-x</a>.
     </div>
   
   

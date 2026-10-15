@@ -12,7 +12,7 @@
         <meta name="author" content="kashi-x">
       
       
-        <link rel="canonical" href="https://kasi-x.github.io/open-law/">
+        <link rel="canonical" href="https://politeuma.github.io/open-law/main/">
       
       
       
@@ -172,13 +172,13 @@
     
     <div class="md-header__source">
       
-        <a href="https://github.com/kasi-x/open-law" title="Go to repository" class="md-source" data-md-component="source">
+        <a href="https://github.com/politeuma/open-law" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
   </div>
   <div class="md-source__repository">
-    kasi-x/open-law
+    politeuma/open-law
   </div>
 </a>
       
@@ -218,13 +218,13 @@
   </label>
   
     <div class="md-nav__source">
-      <a href="https://github.com/kasi-x/open-law" title="Go to repository" class="md-source" data-md-component="source">
+      <a href="https://github.com/politeuma/open-law" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
   </div>
   <div class="md-source__repository">
-    kasi-x/open-law
+    politeuma/open-law
   </div>
 </a>
     </div>
@@ -312,6 +312,28 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Usage
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#language" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Language
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#not-legal-advice" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Not legal advice
       </span>
     </span>
   </a>
@@ -667,6 +689,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#language" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Language
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#not-legal-advice" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Not legal advice
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -692,23 +736,115 @@
 results into one JSON shape. Every fetch goes through a shared polite
 fetcher: robots.txt first, per-host rate limits and budgets, on-disk
 cache, and a contactable User-Agent — the Good-future charter.</p>
-<p>Built-in sources: <code>uk</code> (legislation.gov.uk, XML + native Akoma Ntoso),
-<code>jp</code> (e-Gov 法令 v2), <code>kr</code> (국가법령정보센터 DRF), <code>bd</code> (bdlaws), <code>np</code>
-(Nepal Law Commission), <code>la</code> (Lao Official Gazette), <code>eu</code> (EU
-Publications Office CELLAR by CELEX). For the rest of Asia, the
+<p>Built-in sources (<code>open-law sources</code> prints the live registry):</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>jurisdiction</th>
+<th>channel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bd</code></td>
+<td>Bangladesh</td>
+<td>bdlaws (Ministry of Law, Justice and Parliamentary Affairs)</td>
+</tr>
+<tr>
+<td><code>ca</code></td>
+<td>Canada</td>
+<td>Justice Laws Website (Department of Justice), consolidated XML</td>
+</tr>
+<tr>
+<td><code>de</code></td>
+<td>Germany</td>
+<td>Gesetze im Internet (BMJ/BfJ)</td>
+</tr>
+<tr>
+<td><code>eu</code></td>
+<td>European Union</td>
+<td>EUR-Lex / Publications Office CELLAR, by CELEX</td>
+</tr>
+<tr>
+<td><code>jlt</code></td>
+<td>Japan</td>
+<td>Japanese Law Translation (Ministry of Justice), official English TMX</td>
+</tr>
+<tr>
+<td><code>jp</code></td>
+<td>Japan</td>
+<td>e-Gov 法令検索 (Digital Agency)</td>
+</tr>
+<tr>
+<td><code>kr</code></td>
+<td>South Korea</td>
+<td>국가법령정보센터 DRF (Ministry of Government Legislation), key-gated</td>
+</tr>
+<tr>
+<td><code>la</code></td>
+<td>Laos</td>
+<td>Lao Official Gazette, PDF full texts</td>
+</tr>
+<tr>
+<td><code>mv</code></td>
+<td>Maldives</td>
+<td>mvlaw (Attorney General's Office)</td>
+</tr>
+<tr>
+<td><code>np</code></td>
+<td>Nepal</td>
+<td>Nepal Law Commission</td>
+</tr>
+<tr>
+<td><code>uk</code></td>
+<td>United Kingdom</td>
+<td>legislation.gov.uk, XML + native Akoma Ntoso</td>
+</tr>
+<tr>
+<td><code>us-ecfr</code></td>
+<td>United States</td>
+<td>eCFR — Code of Federal Regulations (regulations only)</td>
+</tr>
+<tr>
+<td><code>us-tx</code></td>
+<td>Texas (US)</td>
+<td>Texas Constitution and Statutes (Texas Legislature)</td>
+</tr>
+</tbody>
+</table>
+<p>For the rest of Asia, the
 <a href="explanations/asia-coverage/">coverage map</a> records each
 jurisdiction's channel status and next step.
 See the <a href="how-to/use-sources/">how-to guide</a> for usage and for adding a
 jurisdiction, and the <a href="explanations/oss-evaluation/">OSS landscape evaluation</a>
 for why each building block was adopted or rejected.</p>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>open-law
+<p>open-law is not on PyPI yet and has no release tag, so install it from
+GitHub with <a href="https://docs.astral.sh/uv/">uv</a>, pinned to a commit (an
+example below — use <code>@&lt;tag&gt;</code> once releases exist):</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span>git+https://github.com/politeuma/open-law.git@49ad7b28596f403a5678b7723a6fd8416aec715a
 </code></pre></div>
+<p>See <a href="tutorials/installation/">Installation</a> for one-off runs, the
+<code>pdf</code> extra, and library use.</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><span class="gp">$ </span>open-law<span class="w"> </span>sources
+<p>The fetcher refuses live requests until <code>FETCHER_CONTACT</code> holds an
+address site operators can reach:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span><span class="nb">export</span><span class="w"> </span><span class="nv">FETCHER_CONTACT</span><span class="o">=</span>you@example.org
+<span class="gp">$ </span>open-law<span class="w"> </span>sources
 <span class="gp">$ </span>open-law<span class="w"> </span>search<span class="w"> </span>jp<span class="w"> </span>銀行法<span class="w"> </span>--limit<span class="w"> </span><span class="m">3</span>
 <span class="gp">$ </span>open-law<span class="w"> </span>fetch<span class="w"> </span>uk<span class="w"> </span>ukcm/2023/1
 </code></pre></div>
+<h2 id="language">Language<a class="headerlink" href="#language" title="Permanent link">&para;</a></h2>
+<p>English is the canonical language of these docs; Japanese versions, where
+they exist, are translations kept to the same standard.</p>
+<h2 id="not-legal-advice">Not legal advice<a class="headerlink" href="#not-legal-advice" title="Permanent link">&para;</a></h2>
+<p>politeuma records what legal sources say and which engineering practices
+they support. It does not decide whether your product complies with any
+law, and using it does not make anything compliant. Sources can go out of
+date or be misread, so every rule shows its sources and the date it was
+last checked. Contributors and reviewers share their understanding in good
+faith; their contributions are not legal advice to you or anyone else.</p>
 
 
 
@@ -772,7 +908,7 @@ for why each building block was adopted or rejected.</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Maintained by <a href="https://github.com/kasi-x/open-law">kashi-x</a>.
+      Maintained by <a href="https://github.com/politeuma/open-law">kashi-x</a>.
     </div>
   
   

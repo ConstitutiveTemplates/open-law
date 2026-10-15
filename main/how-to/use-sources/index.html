@@ -12,7 +12,7 @@
         <meta name="author" content="kashi-x">
       
       
-        <link rel="canonical" href="https://kasi-x.github.io/open-law/how-to/use-sources/">
+        <link rel="canonical" href="https://politeuma.github.io/open-law/main/how-to/use-sources/">
       
       
         <link rel="prev" href="../..">
@@ -174,13 +174,13 @@
     
     <div class="md-header__source">
       
-        <a href="https://github.com/kasi-x/open-law" title="Go to repository" class="md-source" data-md-component="source">
+        <a href="https://github.com/politeuma/open-law" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
   </div>
   <div class="md-source__repository">
-    kasi-x/open-law
+    politeuma/open-law
   </div>
 </a>
       
@@ -220,13 +220,13 @@
   </label>
   
     <div class="md-nav__source">
-      <a href="https://github.com/kasi-x/open-law" title="Go to repository" class="md-source" data-md-component="source">
+      <a href="https://github.com/politeuma/open-law" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
   </div>
   <div class="md-source__repository">
-    kasi-x/open-law
+    politeuma/open-law
   </div>
 </a>
     </div>
@@ -847,6 +847,13 @@
 <p>open-law ships one adapter per jurisdiction, each wrapping that
 country's <em>official</em> publication channel — an API or a bulk data
 endpoint, never a scraped HTML page when a machine channel exists.</p>
+<p>The examples run from a clone with <code>uv run</code>; after
+<code>uv tool install</code> (see <a href="../../tutorials/installation/">Installation</a>),
+drop the <code>uv run</code> prefix. Live commands need a reachable contact
+address first — the fetcher refuses to send requests under the
+<code>contact@example.com</code> placeholder:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span><span class="nb">export</span><span class="w"> </span><span class="nv">FETCHER_CONTACT</span><span class="o">=</span>you@example.org
+</code></pre></div>
 <h2 id="the-source-registry">The source registry<a class="headerlink" href="#the-source-registry" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>sources
 </code></pre></div>
@@ -862,32 +869,38 @@ what every other command calls <code>SOURCE</code>.</p>
 <span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>eu<span class="w"> </span>32022R2065
 </code></pre></div>
 <p><code>fetch</code> prints the unified JSON: identity (<code>source</code>, <code>jurisdiction</code>,
-<code>law_id</code>), title and dates, the machine-readable <code>text_url</code>, an
-<code>akn_url</code> when the source offers Akoma Ntoso, and source-specific
-<code>extras</code>. <code>search</code> prints the same shape minus full-text locations.
-<code>fetch jp &lt;law_id&gt;</code> returns the v1 <code>lawdata</code> full-text XML parsed into
-the unified shape — no registration needed (the elsur application key
-is only required for the newer v2 document endpoints, which open-law
-does not use). Korea still needs its key: <code>search kr</code> activates once
+<code>channel</code>, <code>law_id</code>), title and dates, the machine-readable <code>text_url</code>,
+an <code>akn_url</code> when the source offers Akoma Ntoso, and source-specific
+<code>extras</code> (a JSON object). <code>search</code> prints the same shape minus
+full-text locations. Version dates are <code>last_amended</code> (the most recent
+amendment the source reports, <code>None</code> when it states none — never a
+fetch date) and <code>consolidated_as_of</code> (the point-in-time the served
+text reflects).</p>
+<p><code>fetch jp &lt;law_id&gt;</code> mixes two e-Gov API versions by design: title
+search runs against the v2 <code>/laws</code> endpoint, but the body text still
+comes from the v1 <code>lawdata</code> full-text XML — v1 returns the current
+consolidation with no revision history of its own, so amendment
+awareness comes from the v2 <code>revision_info</code> shape alone
+(<code>amendment_promulgate_date</code> → <code>last_amended</code>,
+<code>amendment_enforcement_date</code> → <code>consolidated_as_of</code>). No registration
+is needed (the elsur application key is only required for the newer
+v2 document endpoints, which open-law does not use). Korea still needs
+its key: <code>search kr</code> activates once
 the <code>LAW_KR_OC</code> open-API id (issued at openapi.law.go.kr, bound to
 your server IP — without it the API answers "required-input
-verification failed") is set in the environment. The <code>jp</code> law_ids that the
-e-Gov list returns are exactly what the orimono ecosystem's JLT legal
-corpus (<code>datasets/legal/</code>, five statutes incl. the 2,730-pair Civil Code
-split) scores against — the official MoJ English translations there are
-the reference side for <code>reference-eval.py</code>, while open-law supplies the
-Japanese-side identity and metadata for the same statutes.</p>
+verification failed") is set in the environment.</p>
 <div class="highlight"><pre><span></span><code><span class="gp"># </span>US<span class="w"> </span>federal<span class="w"> </span>regulations<span class="w"> </span><span class="o">(</span>eCFR<span class="w"> </span>—<span class="w"> </span>no<span class="w"> </span>key,<span class="w"> </span>structured<span class="w"> </span>XML<span class="o">)</span>
-<span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>search<span class="w"> </span>us<span class="w"> </span><span class="s2">"children online privacy"</span><span class="w"> </span>--limit<span class="w"> </span><span class="m">5</span>
-<span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>us<span class="w"> </span>title-16/part-312<span class="w">        </span><span class="c1"># the COPPA Rule</span>
-<span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>us<span class="w"> </span>title-16/part-312/section-312.5
+<span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>search<span class="w"> </span>us-ecfr<span class="w"> </span><span class="s2">"children online privacy"</span><span class="w"> </span>--limit<span class="w"> </span><span class="m">5</span>
+<span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>us-ecfr<span class="w"> </span>title-16/part-312<span class="w">        </span><span class="c1"># the COPPA Rule</span>
+<span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>us-ecfr<span class="w"> </span>title-16/part-312/section-312.5
 </code></pre></div>
-<p>The <code>us</code> source wraps the eCFR public API: <code>search</code> is full-text across
+<p>The <code>us-ecfr</code> source wraps the eCFR public API: <code>search</code> is full-text across
 all 50 titles and maps each hit to an eCFR path (<code>title-N[/part-P|
-/section-S]</code>), <code>fetch</code> returns that node's dated XML. Statutes (the US
-Code) sit on a different channel (uscode.house.gov) that is currently
-bot-gated and out of scope — regulations are the machine-readable bulk
-of US regulatory law.</p>
+/section-S]</code>), <code>fetch</code> returns that node's dated XML. The id says
+<code>us-ecfr</code> (not <code>us</code>) because the channel is regulations only: statutes
+(the US Code) sit on a different channel (uscode.house.gov) that is
+currently bot-gated and out of scope — regulations are the
+machine-readable bulk of US regulatory law.</p>
 <div class="highlight"><pre><span></span><code><span class="gp"># </span>Canada<span class="err">'</span>s<span class="w"> </span>consolidated<span class="w"> </span>federal<span class="w"> </span>statutes<span class="w"> </span><span class="o">(</span>Justice<span class="w"> </span>Laws<span class="w"> </span>Website<span class="w"> </span>XML<span class="o">)</span>
 <span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>ca<span class="w"> </span>P-8.6<span class="w">    </span><span class="c1"># PIPEDA — Personal Information Protection and Electronic Documents Act</span>
 <span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>ca<span class="w"> </span>C-46<span class="w">     </span><span class="c1"># Criminal Code (~6 MB consolidation)</span>
@@ -895,7 +908,8 @@ of US regulatory law.</p>
 <p>The <code>ca</code> source has no machine keyword search (the legacy search form
 returns an empty page to machines) — fetch by act code from the
 human acts index. The XML carries the consolidation's point-in-time
-date as <code>modified</code> and the in-force flag in <code>extras</code>.</p>
+date as <code>consolidated_as_of</code>, the <code>lastAmendedDate</code> as <code>last_amended</code>,
+and the in-force flag in <code>extras</code>.</p>
 <div class="highlight"><pre><span></span><code><span class="gp"># </span>Japan<span class="err">'</span>s<span class="w"> </span>official<span class="w"> </span>English<span class="w"> </span>translations<span class="w"> </span><span class="o">(</span>JLT<span class="w"> </span>—<span class="w"> </span>Ministry<span class="w"> </span>of<span class="w"> </span>Justice<span class="o">)</span>
 <span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>jlt<span class="w"> </span><span class="m">4913</span><span class="w">     </span><span class="c1"># Labor Standards Act, TMX bilingual</span>
 <span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>jlt<span class="w"> </span><span class="m">4848</span><span class="w">     </span><span class="c1"># Civil Code Parts I-III</span>
@@ -906,8 +920,7 @@ translations: <code>fetch</code> resolves the law's view page and returns the TM
 pairs — with PDF/TXT alternates in <code>extras</code>. Keyword search is
 CSRF-gated to machines, so <code>search</code> declines; the per-law ids come from
 the human index. This is the <em>English</em> side of the same statute book
-<code>jp</code> (e-Gov) indexes in Japanese — the bridge orimono's legal corpus
-evaluates against.</p>
+<code>jp</code> (e-Gov) indexes in Japanese.</p>
 <div class="highlight"><pre><span></span><code><span class="gp"># </span>Germany<span class="err">'</span>s<span class="w"> </span>federal<span class="w"> </span>statutes<span class="w"> </span><span class="o">(</span>Gesetze<span class="w"> </span>im<span class="w"> </span>Internet<span class="w"> </span>—<span class="w"> </span>no<span class="w"> </span>key,<span class="w"> </span>static<span class="w"> </span>index<span class="w"> </span>+<span class="w"> </span>HTML<span class="o">)</span>
 <span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>search<span class="w"> </span>de<span class="w"> </span>BGB<span class="w"> </span>--limit<span class="w"> </span><span class="m">3</span>
 <span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>de<span class="w"> </span>bgb<span class="w">        </span><span class="c1"># Bürgerliches Gesetzbuch — text_url is the full-HTML Gesamtausgabe</span>
@@ -942,6 +955,25 @@ latest consolidation page, whose embedded section tree is the full
 text. The <code>/api/v1/</code> JSON router the site bundles advertise answers
 401 without a session, so the adapter reads the server-rendered pages
 instead. Content language is Dhivehi (<code>div</code>).</p>
+<div class="highlight"><pre><span></span><code><span class="gp"># </span>EU<span class="w"> </span>law<span class="w"> </span>by<span class="w"> </span>CELEX<span class="w"> </span>number<span class="w"> </span><span class="o">(</span>CELLAR<span class="w"> </span>content<span class="w"> </span>negotiation<span class="w"> </span>—<span class="w"> </span>no<span class="w"> </span>key<span class="o">)</span>
+<span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>fetch<span class="w"> </span>eu<span class="w"> </span>32022R2065<span class="w">   </span><span class="c1"># Digital Services Act — text_url is the metadata graph</span>
+</code></pre></div>
+<p>The <code>eu</code> source wraps the Publications Office's CELLAR repository.
+Ids are CELEX numbers; <code>fetch</code> makes two polite content-negotiated
+requests to the same resource: the RDF metadata graph
+(<code>Accept: application/rdf+xml</code>, the adapter's declared default) and
+the English XHTML rendition (<code>&lt;celex&gt;.ENG.xhtml</code>, requested with a
+per-request <code>Accept: application/xhtml+xml</code>). The rendition's
+<code>div.eli-subdivision#art_N</code> articles become <code>provisions</code> — each
+article carries its printed number (<code>Article 23</code>), the <code>oj-sti-art</code>
+subject as <code>heading</code>, and the numbered paragraph blocks as children
+(<code>art_23__para_1</code>). The fetcher's disk cache keys every entry by URL
+<em>and</em> negotiation headers, so the RDF and XHTML bodies of one CELEX
+number never collide. When a CELEX number has no XHTML rendition
+(404), <code>fetch</code> still returns the metadata with <code>provisions</code> empty —
+a missing rendition is not a failed fetch. A CELEX number is not a
+keyword-search index: <code>search</code> declines and points at the
+Publications Office SPARQL endpoint.</p>
 <h2 id="read-the-full-text">Read the full text<a class="headerlink" href="#read-the-full-text" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>text<span class="w"> </span>bd<span class="w"> </span><span class="m">43</span><span class="w">        </span><span class="c1"># HTML page -&gt; plain text</span>
 <span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>text<span class="w"> </span>uk<span class="w"> </span>ukpga/1989/6<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-40
@@ -949,7 +981,9 @@ instead. Content language is Dhivehi (<code>div</code>).</p>
 <p><code>text</code> refetches the law's <code>text_url</code> through the polite fetcher (the
 on-disk cache makes it free right after a <code>fetch</code>) and strips it to
 plain text: XML sources extract character data, HTML pages strip tags.
-Sources whose full text is a PDF (Laos) refuse and point at the file.</p>
+Sources whose full text is a PDF (Laos) are extracted with <code>pypdf</code> when
+the <code>pdf</code> extra is installed; without it, <code>text</code> refuses and points at
+the file. Scanned PDFs without a text layer come back empty.</p>
 <p>Search results and fetched laws carry ISO-8601 <code>promulgation_date</code>
 values; the source's original spelling is preserved in <code>extras</code>
 (<code>promulgation_date_raw</code>, <code>document_date</code>, ...).</p>
@@ -964,21 +998,37 @@ the id list comes from an index or a script:</p>
 <div class="highlight"><pre><span></span><code><span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>dump<span class="w"> </span>bd<span class="w"> </span>--ids-from<span class="w"> </span>bd-act-ids.txt<span class="w"> </span>--out<span class="w"> </span>laws.jsonl
 <span class="gp">$ </span>grep<span class="w"> </span>-oE<span class="w"> </span><span class="s1">'act-details-[0-9]+'</span><span class="w"> </span>index.html<span class="w"> </span><span class="p">|</span><span class="w"> </span>cut<span class="w"> </span>-d-<span class="w"> </span>-f3<span class="w"> </span><span class="p">|</span><span class="w"> </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>dump<span class="w"> </span>bd<span class="w"> </span>--ids-from<span class="w"> </span>-<span class="w"> </span>-o<span class="w"> </span>laws.jsonl
 </code></pre></div>
-<p>Fetches happen before the file is created, so a failing id never leaves
-a partial file behind. JSONL is the interchange format for the
+<p>A failure that is not the host budget (a missing act, a denied page)
+leaves no partial file behind. Hitting the budget does keep the work:
+the dump writes what it fetched, reports <code>host budget reached after N of
+M law(s)</code>, saves the ids it never reached to <code>&lt;out&gt;.remaining</code>, and
+prints the command that resumes the run (<code>--ids-from &lt;out&gt;.remaining
+--budget &lt;higher&gt;</code>). Because everything written is cached, the resumed
+run only pays for the ids that are still missing.
+JSONL is the interchange format for the
 consolidation pipeline: jq, DuckDB (<code>read_jsonl</code>), and pandas all read
 it directly.</p>
 <h2 id="judge-a-url-before-crawling-it">Judge a URL before crawling it<a class="headerlink" href="#judge-a-url-before-crawling-it" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="gp">$ </span>uv<span class="w"> </span>run<span class="w"> </span>open-law<span class="w"> </span>preflight<span class="w"> </span>https://example.com/feed
 </code></pre></div>
 <p>prints the fetcher's judgement as JSON: feed/API discovery, robots.txt
-verdict, and per-host budget state — the tool the charter runs before</p>
+verdict, and per-host budget state — the check the charter asks for
+before crawling a new site. It is not free: it reads robots.txt first,
+then sends a HEAD to the URL and probes the feed and API endpoints, all
+rate-limited and counted toward the host budget.</p>
 <h2 id="politeness-is-per-source">Politeness is per source<a class="headerlink" href="#politeness-is-per-source" title="Permanent link">&para;</a></h2>
 <p>Each adapter class declares its own <code>crawl_delay_seconds</code> (mirroring
 the source's robots.txt <code>Crawl-delay</code>, such as legislation.gov.uk's 5)
 and <code>http_headers</code> (CELLAR's content negotiation). The CLI builds the
 default fetcher from those declarations, so every request is polite by
-construction; responses are cached under <code>.cache/fetcher/</code> for a day.</p>
+construction; responses are cached in the platform user cache
+(<code>&lt;user cache&gt;/open-law/fetch</code>) for a day, keyed by the URL and the
+negotiation headers. An adapter that needs a second rendition of one URL
+(EUR-Lex's XHTML beside its RDF) passes per-request headers on the fetch
+call; the cache key follows the merged headers, so neither rendition can
+be served the other's body. <code>--budget</code>, <code>--delay</code> and <code>--contact</code> override the
+per-host request budget, the delay and the contact address on any
+fetching command.</p>
 <h2 id="fetch-budgets">Fetch budgets<a class="headerlink" href="#fetch-budgets" title="Permanent link">&para;</a></h2>
 <p>Recommended <code>FetchConfig</code> per adapter (delay × budget × timeout × cache):</p>
 <table>
@@ -1063,7 +1113,7 @@ construction; responses are cached under <code>.cache/fetcher/</code> for a day.
 <td style="text-align: right;">100</td>
 <td style="text-align: right;">10</td>
 <td style="text-align: right;">86400</td>
-<td><code>eu</code>, <code>jp</code>, <code>kr</code>, <code>us</code>, <code>jlt</code> — defaults</td>
+<td><code>eu</code>, <code>jp</code>, <code>kr</code>, <code>us-ecfr</code>, <code>jlt</code> — defaults</td>
 </tr>
 </tbody>
 </table>
@@ -1080,7 +1130,7 @@ via <code>-m "not live"</code>). <code>kr</code> additionally requires <code>LAW
 openapi.law.go.kr, bound to the caller's IP).</p>
 <h2 id="add-a-new-jurisdiction">Add a new jurisdiction<a class="headerlink" href="#add-a-new-jurisdiction" title="Permanent link">&para;</a></h2>
 <ol>
-<li>Subclass <code>open_law.sources.base.SourceAdapter</code> in
+<li>Subclass <code>open_law.sources.adapter.SourceAdapter</code> in
    <code>src/open_law/sources/&lt;country&gt;.py</code>; implement <code>search</code> and <code>fetch</code>,
    parsing into <code>open_law.models.LawSummary</code> / <code>Law</code>. If a capability
    is genuinely unavailable, raise <code>NotAvailableBySourceError</code> with the
@@ -1172,7 +1222,7 @@ may already have an API, a bulk download, or a known-dead channel.</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Maintained by <a href="https://github.com/kasi-x/open-law">kashi-x</a>.
+      Maintained by <a href="https://github.com/politeuma/open-law">kashi-x</a>.
     </div>
   
   

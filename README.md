@@ -102,9 +102,17 @@ short, sourced rules that sit next to your code. open-law is its source
 layer: it reads the statutes and regulations those rules cite from their
 official publishers, so the citations in
 [law-map](https://github.com/politeuma/law-map) can be checked against the
-current text. It is an optional, standalone tool — nothing else in
+current text. Its pipeline role is the legislation watch: fetch official
+texts, pin version dates (`last_amended`, `consolidated_as_of`), and
+serve the article tree — the inputs law-map's amendment detection reads.
+It is an optional, standalone tool — nothing else in
 politeuma needs it installed, and it is useful on its own for anyone who
 needs legislation as data.
+The comparative helpers (`coverage`, `correspond`, `topics`) stay in this
+package deliberately: they are thin triage over dumped corpora with no
+extra dependencies, and splitting them out would add a package for no
+isolation gain while the API is still 0.x. If they grow heavier
+dependencies or non-triage logic, they move to their own package.
 
 While open-law is 0.x, its CLI, JSON shape and Python API may change
 without notice.

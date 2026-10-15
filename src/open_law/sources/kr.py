@@ -79,9 +79,7 @@ class KoreaLawAdapter(SourceAdapter):
             extras: dict[str, str] = {}
             if promulgation_raw is not None:
                 extras["promulgation_date_raw"] = promulgation_raw
-            extras.update(
-                (key, text) for tag, key in _EXTRAS_TAGS if (text := xml_child_text(entry, tag)) is not None
-            )
+            extras.update((key, text) for tag, key in _EXTRAS_TAGS if (text := xml_child_text(entry, tag)) is not None)
             summaries.append(
                 LawSummary(
                     source=self.source_id,

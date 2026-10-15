@@ -254,7 +254,7 @@ class PoliteFetcher:
             )
             raise BudgetExceededError(msg)
 
-    def _send(self, method: str, url: str) -> httpx.Response:
+    def _send(self, method: str, url: str, headers: dict[str, str] | None = None) -> httpx.Response:
         """The one door to the network: robots → wait → send → count.
 
         Every page, probe and discovery request goes through here, so the
@@ -262,6 +262,10 @@ class PoliteFetcher:
         included) is fetched and obeyed first, then the contact and host
         budget are checked, the host's rate-limit slot is awaited, the
         request is sent, and the attempt is counted — even when it fails.
+
+        *headers* overrides the client's negotiation headers for this one
+        request (the EUR-Lex XHTML rendition under an RDF-keyed fetcher);
+        ``None`` sends the client defaults.
         """
         host = _http_parts(url).netloc
         self._robots_gate(url)
@@ -269,7 +273,7 @@ class PoliteFetcher:
         self._check_budget(host)
         self._wait_for_slot(host)
         try:
-            return self._client.request(method, url, timeout=self.config.timeout_seconds)
+            return self._client.request(method, url, headers=headers, timeout=self.config.timeout_seconds)
         finally:
             self.state.count_request(host)
 
@@ -314,23 +318,27 @@ class PoliteFetcher:
         if wait > 0:
             time.sleep(wait)
 
-    def _remember_text(self, result: FetchResult | None) -> FetchResult | None:
+    def _remember_text(self, result: FetchResult | None, headers: dict[str, str] | None = None) -> FetchResult | None:
         """Cache a Wayback text result under the negotiation-aware key."""
         if result is None:
             return None
-        write_cached_body(result.url, result.text, self.config, self._headers)
+        write_cached_body(result.url, result.text, self.config, headers if headers is not None else self._headers)
         self.last_result = result
         return result
 
-    def _wayback_for_error_status(self, url: str, response: httpx.Response) -> FetchResult | None:
+    def _wayback_for_error_status(
+        self, url: str, response: httpx.Response, headers: dict[str, str] | None = None
+    ) -> FetchResult | None:
         """Wayback result for a 5xx *response*; else raise; None on success."""
-        return self._remember_text(wayback_for_error_status(self._client, url, response, self.config, self.state))
+        return self._remember_text(
+            wayback_for_error_status(self._client, url, response, self.config, self.state), headers
+        )
 
-    def _wayback_on_transport_error(self, url: str) -> FetchResult | None:
+    def _wayback_on_transport_error(self, url: str, headers: dict[str, str] | None = None) -> FetchResult | None:
         """Wayback result after a transport failure; None when not attempted/found."""
-        return self._remember_text(wayback_on_transport_error(self._client, url, self.config, self.state))
+        return self._remember_text(wayback_on_transport_error(self._client, url, self.config, self.state), headers)
 
-    def fetch_result(self, url: str, *, discover: bool = True) -> FetchResult:
+    def fetch_result(self, url: str, *, discover: bool = True, headers: dict[str, str] | None = None) -> FetchResult:
         """GET *url* politely, returning a :class:`FetchResult` with provenance.
 
         When ``wayback_fallback`` is on, network errors (``httpx.HTTPError``)
@@ -338,12 +346,21 @@ class PoliteFetcher:
         does — the charter forbids bypassing access control). The snapshot
         URL and timestamp are carried on the result so the CLI can report
         them.
+
+        *headers* overrides the fetcher's negotiation headers for this one
+        request and joins them in the cache key, so a second rendition of
+        the same URL under a different ``Accept`` never collides with the
+        first (EUR-Lex's XHTML under an RDF-keyed fetcher). ``None``
+        fetches under the declared headers.
         """
         config = self.config
         url = self._resolve_url(url, discover=discover)
+        negotiated = dict(self._headers)
+        if headers:
+            negotiated.update(headers)
         # Cache before the rate limit: a cached body costs the host nothing,
         # so a fully cached re-run must not sleep per item.
-        cached_text = read_cached_body(url, config, self._headers)
+        cached_text = read_cached_body(url, config, negotiated)
         if cached_text is not None:
             result = FetchResult(text=cached_text, url=url)
             self.last_result = result
@@ -352,10 +369,10 @@ class PoliteFetcher:
         # httpx transport failures or 5xx — never on 4xx.
         response: httpx.Response | None = None
         try:
-            response = self._send("GET", url)
+            response = self._send("GET", url, headers=headers)
             if response.status_code in (401, 403):
                 raise _access_denied(url, response.status_code)
-            wb = self._wayback_for_error_status(url, response)
+            wb = self._wayback_for_error_status(url, response, negotiated)
             if wb is not None:
                 return wb
         except (AccessDeniedError, RobotDeniedError, BudgetExceededError):
@@ -365,19 +382,19 @@ class PoliteFetcher:
             # Re-raise; Wayback was already attempted for 5xx.
             raise exc from None
         except httpx.HTTPError:
-            wb = self._wayback_on_transport_error(url)
+            wb = self._wayback_on_transport_error(url, negotiated)
             if wb is not None:
                 return wb
             raise
         # Success path: 2xx.
         assert response is not None
         text = response.text
-        write_cached_body(url, text, config, self._headers)
+        write_cached_body(url, text, config, negotiated)
         result = FetchResult(text=text, url=url)
         self.last_result = result
         return result
 
-    def fetch_text(self, url: str, *, discover: bool = True) -> FetchTextResult:
+    def fetch_text(self, url: str, *, discover: bool = True, headers: dict[str, str] | None = None) -> FetchTextResult:
         """GET *url* politely: preflight judgement, cached or rate-limited GET.
 
         Runs :meth:`preflight` first (robots.txt, access, feed/API
@@ -393,13 +410,18 @@ class PoliteFetcher:
         probes — and a feed switch that would swap the API URL for a
         feed — cannot get in the way.
 
+        ``headers`` overrides the fetcher's declared negotiation headers
+        for this one request and is cached under its merged key (a second
+        rendition of one URL, such as EUR-Lex's XHTML beside its RDF).
+        See :meth:`fetch_result`.
+
         When ``FetchConfig.wayback_fallback`` is enabled, network failures
         (DNS, timeouts, ``httpx.HTTPError``) and 5xx responses fall back
         to ``https://archive.org/wayback/available?url=`` (4xx never does).
         The return value exposes ``from_wayback`` / ``wayback_url`` /
         ``wayback_timestamp`` and ``last_result`` is also updated.
         """
-        result = self.fetch_result(url, discover=discover)
+        result = self.fetch_result(url, discover=discover, headers=headers)
         return FetchTextResult(
             result.text,
             from_wayback=result.from_wayback,

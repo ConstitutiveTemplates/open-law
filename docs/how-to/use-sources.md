@@ -142,6 +142,28 @@ text. The `/api/v1/` JSON router the site bundles advertise answers
 401 without a session, so the adapter reads the server-rendered pages
 instead. Content language is Dhivehi (`div`).
 
+```console
+# EU law by CELEX number (CELLAR content negotiation — no key)
+$ uv run open-law fetch eu 32022R2065   # Digital Services Act — text_url is the metadata graph
+```
+
+The `eu` source wraps the Publications Office's CELLAR repository.
+Ids are CELEX numbers; `fetch` makes two polite content-negotiated
+requests to the same resource: the RDF metadata graph
+(`Accept: application/rdf+xml`, the adapter's declared default) and
+the English XHTML rendition (`<celex>.ENG.xhtml`, requested with a
+per-request `Accept: application/xhtml+xml`). The rendition's
+`div.eli-subdivision#art_N` articles become `provisions` — each
+article carries its printed number (`Article 23`), the `oj-sti-art`
+subject as `heading`, and the numbered paragraph blocks as children
+(`art_23__para_1`). The fetcher's disk cache keys every entry by URL
+*and* negotiation headers, so the RDF and XHTML bodies of one CELEX
+number never collide. When a CELEX number has no XHTML rendition
+(404), `fetch` still returns the metadata with `provisions` empty —
+a missing rendition is not a failed fetch. A CELEX number is not a
+keyword-search index: `search` declines and points at the
+Publications Office SPARQL endpoint.
+
 ## Read the full text
 
 ```console
@@ -208,7 +230,10 @@ and `http_headers` (CELLAR's content negotiation). The CLI builds the
 default fetcher from those declarations, so every request is polite by
 construction; responses are cached in the platform user cache
 (`<user cache>/open-law/fetch`) for a day, keyed by the URL and the
-negotiation headers. `--budget`, `--delay` and `--contact` override the
+negotiation headers. An adapter that needs a second rendition of one URL
+(EUR-Lex's XHTML beside its RDF) passes per-request headers on the fetch
+call; the cache key follows the merged headers, so neither rendition can
+be served the other's body. `--budget`, `--delay` and `--contact` override the
 per-host request budget, the delay and the contact address on any
 fetching command.
 

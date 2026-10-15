@@ -53,7 +53,7 @@ if you break one, the checks fail first.
   **Apache-2.0** (see `LICENSE`). Dependency licenses are
   audited by `just license-check` (`pip-licenses --fail-on`): copyleft the
   project license cannot absorb fails the build.
-- **No CAPTCHA-solving.** This template never generates CAPTCHA-bypass
+- **No CAPTCHA-solving.** This project never generates CAPTCHA-bypass
   helpers (2captcha-style solvers, token injectors). If a site blocks bots,
   use its API or ask permission — bypassing bot protection violates the
   site's terms and likely the law (cf. CFAA / 不正アクセス禁止法).

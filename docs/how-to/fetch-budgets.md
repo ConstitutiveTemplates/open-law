@@ -68,7 +68,11 @@ plus robots.txt for the `api.` host — so a first `dump` writes about **86
 laws** out of a 100-request budget. A later run (bodies cached, fresh
 process) costs robots.txt plus one GET per law: **99 laws**. Adapter
 fetches skip discovery entirely (`discover=False`), so within one process
-each further page is one request.
+each further page is one request — except `eu`, whose `fetch` makes two
+polite requests per CELEX number (the RDF metadata graph and the English
+XHTML rendition the article tree comes from), each cached under its own
+`Accept`. A cold `eu` dump therefore writes about half as many ids per
+budget, and a 404 rendition costs the same two requests as a hit.
 
 Wall time for a bulk `dump` is `requests × delay_seconds`:
 
